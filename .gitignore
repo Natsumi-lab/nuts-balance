@@ -30,7 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
 .env.local
 
@@ -41,7 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.DS_Store
+# editor directories and files
 .vscode/
 .idea/
 *.swp
@@ -50,8 +50,22 @@ next-env.d.ts
 *.bak
 *.orig
 
+# Supabase
 /supabase/temp
 
-/coverage
+# OS specific
+.DS_Store
+Thumbs.db
 
-.vercel
+# Logs
+logs/
+*.log
+
+# Next.js cache
+.swc/
+
+# CLAUDE.md is for project configuration
+CLAUDE.md
+
+# Temp files
+*.tmp
