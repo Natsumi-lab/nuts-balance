@@ -69,3 +69,12 @@ CLAUDE.md
 
 # Temp files
 *.tmp
+
+# Claude Code / MCP
+mcp.json
+.mcp.json
+.claude.json
+.claude/
+.claude/settings.local.json
+.serena/
+
