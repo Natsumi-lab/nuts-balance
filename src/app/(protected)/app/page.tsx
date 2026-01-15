@@ -10,9 +10,9 @@ import DateInitializer from './DateInitializer';
  * 日付パラメータの型
  */
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     date?: string;
-  };
+  }>;
 }
 
 /**
@@ -114,7 +114,8 @@ async function fetchDailyData(date: string): Promise<{
  */
 export default async function Page({ searchParams }: PageProps) {
   // URLクエリパラメータから日付を取得
-  const { date } = searchParams;
+  const params = await searchParams;
+  const { date } = params;
 
   // 日付が指定されていない場合は日付初期化コンポーネントを表示
   if (!date) {

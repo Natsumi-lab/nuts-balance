@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Nut, ActionResult } from '@/lib/types';
+import type { Nut, ActionResult } from '@/lib/types';
 import { upsertDailyLog } from './actions';
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型
+ * - nuts.id は bigint（Supabaseからは number）想定
+ * - selectedNutIds も number[] に寄せるのが理想だが、移行中なので (number|string) を許容
  */
 interface NutCheckListProps {
   nuts: Nut[];
-  selectedNutIds: string[];
+  selectedNutIds: Array<number | string>;
   date: string;
 }
 
@@ -20,21 +22,30 @@ interface NutCheckListProps {
  * ナッツの選択と保存機能を提供
  */
 export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckListProps) {
-  // 選択されたナッツIDを管理するローカル状態
-  const [selected, setSelected] = useState<string[]>(selectedNutIds);
-  // ローディング状態管理用のtransition
-  const [isPending, startTransition] = useTransition();
-  // アクション実行結果のメッセージ
-  const [result, setResult] = useState<ActionResult | null>(null);
-  // ルーター
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [result, setResult] = useState<ActionResult | null>(null);
+
+  // selectedNutIds を number[] に正規化（bigint列に合わせる）
+  const initialSelected = useMemo(() => {
+    return selectedNutIds
+      .map((v) => (typeof v === 'string' ? Number(v) : v))
+      .filter((v) => Number.isFinite(v)) as number[];
+  }, [selectedNutIds]);
+
+  // 選択されたナッツIDを管理するローカル状態（numberで統一）
+  const [selected, setSelected] = useState<number[]>(initialSelected);
+
+  // ★ 重要：props が変わったら state を同期し直す（保存後の refresh / 日付移動でも崩れない）
+  useEffect(() => {
+    setSelected(initialSelected);
+    setResult(null);
+  }, [initialSelected, date]);
 
   // ナッツの選択状態を切り替える
-  const toggleSelection = (nutId: string) => {
-    setSelected(prev =>
-      prev.includes(nutId)
-        ? prev.filter(id => id !== nutId)
-        : [...prev, nutId]
+  const toggleSelection = (nutId: number) => {
+    setSelected((prev) =>
+      prev.includes(nutId) ? prev.filter((id) => id !== nutId) : [...prev, nutId]
     );
   };
 
@@ -44,19 +55,18 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
 
     startTransition(async () => {
       try {
-        // Server Actionを呼び出し
-        const result = await upsertDailyLog(date, selected);
-        setResult(result);
+        // Server Actionを呼び出し（actions.ts 側で number|string どちらでも受けられる）
+        const res = await upsertDailyLog(date, selected);
+        setResult(res);
 
-        if (result.success) {
-          // 成功したら画面を更新
+        if (res.success) {
           router.refresh();
         }
       } catch (error) {
         console.error('保存中にエラーが発生しました:', error);
         setResult({
           success: false,
-          message: '予期せぬエラーが発生しました'
+          message: '予期せぬエラーが発生しました',
         });
       }
     });
@@ -67,37 +77,48 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
       <h2 className="text-xl font-bold mb-4">今日のナッツ記録</h2>
 
       <div className="space-y-4">
-        {nuts.map((nut) => (
-          <div
-            key={nut.id}
-            className="flex items-center space-x-4 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
-            onClick={() => toggleSelection(nut.id)}
-          >
-            <input
-              type="checkbox"
-              checked={selected.includes(nut.id)}
-              onChange={() => toggleSelection(nut.id)}
-              className="w-5 h-5"
-            />
+        {nuts.map((nut) => {
+          // nuts.id が number（bigint由来）想定。念のため変換。
+          const nutId =
+            typeof (nut as any).id === 'string' ? Number((nut as any).id) : (nut as any).id;
 
-            <div className="relative w-16 h-16 overflow-hidden">
-              <Image
-                src={nut.image_path}
-                alt={nut.name}
-                width={80}
-                height={80}
-                className="object-cover"
+          const checked = selected.includes(nutId);
+
+          return (
+            <label
+              key={String(nutId)}
+              className="flex items-center space-x-4 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+            >
+              {/* ★ onClick と onChange の二重toggleをやめて、input のみで切り替える */}
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleSelection(nutId)}
+                disabled={isPending}
+                className="w-5 h-5"
               />
-            </div>
 
-            <div>
-              <h3 className="font-medium">{nut.name}</h3>
-              {nut.description && (
-                <p className="text-sm text-gray-600">{nut.description}</p>
-              )}
-            </div>
-          </div>
-        ))}
+              {/* 画像は無ければエラーになるので、初版要件なら表示を抑制してOK */}
+              {nut.image_path ? (
+                <div className="relative w-16 h-16 overflow-hidden">
+                  <Image
+                    src={nut.image_path}
+                    alt={nut.name}
+                    width={80}
+                    height={80}
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : null}
+
+              <div>
+                <h3 className="font-medium">{nut.name}</h3>
+                {nut.description && <p className="text-sm text-gray-600">{nut.description}</p>}
+              </div>
+            </label>
+          );
+        })}
       </div>
 
       <div className="mt-6">
@@ -110,7 +131,11 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
         </button>
 
         {result && (
-          <div className={`mt-2 p-2 rounded ${result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div
+            className={`mt-2 p-2 rounded ${
+              result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}
+          >
             {result.message}
           </div>
         )}
