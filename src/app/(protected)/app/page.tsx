@@ -1,10 +1,11 @@
-import { Suspense } from 'react';
-import { createClient } from '@/lib/supabase/server';
-import { Nut, Streak, DailyLogData } from '@/lib/types';
-import NutCheckList from './NutCheckList';
-import DateSelector from './DateSelector';
-import UserInfo from './UserInfo';
-import DateInitializer from './DateInitializer';
+import { Suspense } from "react";
+import { createClient } from "@/lib/supabase/server";
+import { Nut, Streak, DailyLogData } from "@/lib/types";
+import NutCheckList from "./NutCheckList";
+import DateSelector from "./DateSelector";
+import UserInfo from "./UserInfo";
+import DateInitializer from "./DateInitializer";
+import CalendarPicker from "./CalendarPicker";
 
 /**
  * 日付パラメータの型
@@ -50,25 +51,25 @@ async function fetchDailyData(date: string): Promise<{
 
   // 1. ナッツ一覧を取得
   const { data: nuts, error: nutsError } = await supabase
-    .from('nuts')
-    .select('*')
-    .order('id');
+    .from("nuts")
+    .select("*")
+    .order("id");
 
   if (nutsError) {
-    console.error('ナッツの取得に失敗しました:', nutsError);
-    throw new Error('ナッツの取得に失敗しました');
+    console.error("ナッツの取得に失敗しました:", nutsError);
+    throw new Error("ナッツの取得に失敗しました");
   }
 
   // 2. 指定日付の日記を取得（RLS前提でuser_id条件は不要）
   const { data: dailyLog, error: dailyLogError } = await supabase
-    .from('daily_logs')
-    .select('*')
-    .eq('log_date', date)
+    .from("daily_logs")
+    .select("*")
+    .eq("log_date", date)
     .maybeSingle();
 
   if (dailyLogError) {
-    console.error('日誌の取得に失敗しました:', dailyLogError);
-    throw new Error('日誌の取得に失敗しました');
+    console.error("日誌の取得に失敗しました:", dailyLogError);
+    throw new Error("日誌の取得に失敗しました");
   }
 
   // 3. 日記があれば、その日のナッツ選択を取得
@@ -76,36 +77,36 @@ async function fetchDailyData(date: string): Promise<{
 
   if (dailyLog) {
     const { data: dailyLogItems, error: itemsError } = await supabase
-      .from('daily_log_items')
-      .select('nut_id')
-      .eq('daily_log_id', dailyLog.id);
+      .from("daily_log_items")
+      .select("nut_id")
+      .eq("daily_log_id", dailyLog.id);
 
     if (itemsError) {
-      console.error('日誌アイテムの取得に失敗しました:', itemsError);
-      throw new Error('日誌アイテムの取得に失敗しました');
+      console.error("日誌アイテムの取得に失敗しました:", itemsError);
+      throw new Error("日誌アイテムの取得に失敗しました");
     }
 
-    selectedNutIds = dailyLogItems.map(item => item.nut_id);
+    selectedNutIds = dailyLogItems.map((item) => item.nut_id);
   }
 
   // 4. ストリーク情報を取得
   const { data: streakData, error: streakError } = await supabase
-    .from('streaks')
-    .select('*')
+    .from("streaks")
+    .select("*")
     .maybeSingle();
 
   if (streakError) {
-    console.error('ストリーク情報の取得に失敗しました:', streakError);
-    throw new Error('ストリーク情報の取得に失敗しました');
+    console.error("ストリーク情報の取得に失敗しました:", streakError);
+    throw new Error("ストリーク情報の取得に失敗しました");
   }
 
   return {
     nuts: nuts as Nut[],
     dailyLogData: {
       dailyLog: dailyLog || null,
-      selectedNutIds
+      selectedNutIds,
     },
-    streak: streakData?.current_streak || 0
+    streak: streakData?.current_streak || 0,
   };
 }
 
@@ -128,14 +129,15 @@ export default async function Page({ searchParams }: PageProps) {
 
     return (
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-8 text-center">ナッツバランス記録</h1>
+        <h1 className="text-2xl font-bold mb-8 text-center">
+          ナッツバランス記録
+        </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* 左カラム: 日付選択 */}
-          <div>
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <DateSelector date={date} />
-            </Suspense>
+          <div className="space-y-4">
+            <DateSelector date={date} />
+            <CalendarPicker selectedDate={date} />
           </div>
 
           {/* 中央カラム: ナッツチェックリスト */}
@@ -159,7 +161,7 @@ export default async function Page({ searchParams }: PageProps) {
       </main>
     );
   } catch (error) {
-    console.error('ページ表示エラー:', error);
+    console.error("ページ表示エラー:", error);
     return (
       <div className="container mx-auto px-4 py-8">
         <ErrorMessage message="データの読み込み中にエラーが発生しました。しばらくしてから再度お試しください。" />

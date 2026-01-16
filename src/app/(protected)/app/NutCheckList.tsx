@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import type { Nut, ActionResult } from '@/lib/types';
-import { upsertDailyLog } from './actions';
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import type { Nut, ActionResult } from "@/lib/types";
+import { upsertDailyLog } from "./actions";
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型
@@ -21,7 +21,11 @@ interface NutCheckListProps {
  * ナッツチェックリストコンポーネント
  * ナッツの選択と保存機能を提供
  */
-export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckListProps) {
+export default function NutCheckList({
+  nuts,
+  selectedNutIds,
+  date,
+}: NutCheckListProps) {
   const router = useRouter();
 
   // 保存中のUI制御（disabled / ボタン文言など）
@@ -36,7 +40,7 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
   // selectedNutIds を number[] に正規化（bigint列に合わせる）
   const initialSelected = useMemo(() => {
     return selectedNutIds
-      .map((v) => (typeof v === 'string' ? Number(v) : v))
+      .map((v) => (typeof v === "string" ? Number(v) : v))
       .filter((v) => Number.isFinite(v)) as number[];
   }, [selectedNutIds]);
 
@@ -58,7 +62,9 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
   // ナッツの選択状態を切り替える
   const toggleSelection = (nutId: number) => {
     setSelected((prev) =>
-      prev.includes(nutId) ? prev.filter((id) => id !== nutId) : [...prev, nutId]
+      prev.includes(nutId)
+        ? prev.filter((id) => id !== nutId)
+        : [...prev, nutId]
     );
   };
 
@@ -85,10 +91,10 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
           router.refresh();
         }
       } catch (error) {
-        console.error('保存中にエラーが発生しました:', error);
+        console.error("保存中にエラーが発生しました:", error);
         setResult({
           success: false,
-          message: '予期せぬエラーが発生しました',
+          message: "予期せぬエラーが発生しました",
         });
       }
     });
@@ -102,7 +108,7 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
         {nuts.map((nut) => {
           // nuts.id が number（bigint由来）想定。念のため変換。
           const nutId =
-            typeof (nut as any).id === 'string'
+            typeof (nut as any).id === "string"
               ? Number((nut as any).id)
               : ((nut as any).id as number);
 
@@ -152,13 +158,15 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
           disabled={isPending}
           className="bg-green-600 text-white px-4 py-2 rounded-lg w-full hover:bg-green-700 disabled:bg-gray-400"
         >
-          {isPending ? '保存中...' : '保存する'}
+          {isPending ? "保存中..." : "保存する"}
         </button>
 
         {result ? (
           <div
             className={`mt-2 p-2 rounded ${
-              result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              result.success
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
             }`}
           >
             {result.message}
