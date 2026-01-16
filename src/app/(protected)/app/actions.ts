@@ -61,76 +61,23 @@ export async function upsertDailyLog(
       .filter((v) => Number.isFinite(v)) as number[];
 
     // -----------------------------
-    // 4. daily_logs を upsert
-    //    UNIQUE(user_id, log_date) 制約を onConflict で明示
+    // 4. 保存処理は RPC に集約（トランザクションで一括処理）
+    //    - daily_logs upsert
+    //    - daily_log_items 全削除→insert
+    //    - streaks 再計算＆更新
     // -----------------------------
-    const { data: dailyLog, error: dailyLogError } = await supabase
-      .from('daily_logs')
-      .upsert(
-        {
-          user_id: user.id,
-          log_date: date,
-        },
-        {
-          onConflict: 'user_id,log_date', // ★ ここが重要
-        }
-      )
-      .select('id')
-      .single();
+    const { error: rpcError } = await supabase.rpc('upsert_daily_log', {
+      p_log_date: date,
+      p_nut_ids: nutIdsNum, // bigint[] 相当
+    });
 
-    if (dailyLogError) {
-      console.error('日誌の保存エラー:', dailyLogError);
+    if (rpcError) {
+      console.error('RPC 保存エラー:', rpcError);
       return {
         success: false,
         message: '日誌の保存に失敗しました',
       };
     }
-
-    // -----------------------------
-    // 5. 既存の daily_log_items を全削除
-    // -----------------------------
-    const { error: deleteError } = await supabase
-      .from('daily_log_items')
-      .delete()
-      .eq('daily_log_id', dailyLog.id);
-
-    if (deleteError) {
-      console.error('既存記録の削除エラー:', deleteError);
-      return {
-        success: false,
-        message: '既存の記録削除に失敗しました',
-      };
-    }
-
-    // -----------------------------
-    // 6. 選択されたナッツを insert
-    //    重複は UNIQUE(daily_log_id, nut_id) で防止
-    // -----------------------------
-    if (nutIdsNum.length > 0) {
-      const uniqueNutIds = Array.from(new Set(nutIdsNum));
-
-      const dailyLogItems = uniqueNutIds.map((nutId) => ({
-        daily_log_id: dailyLog.id,
-        nut_id: nutId,
-      }));
-
-      const { error: insertError } = await supabase
-        .from('daily_log_items')
-        .insert(dailyLogItems);
-
-      if (insertError) {
-        console.error('ナッツ記録の挿入エラー:', insertError);
-        return {
-          success: false,
-          message: 'ナッツ記録の保存に失敗しました',
-        };
-      }
-    }
-
-    // -----------------------------
-    // 7. TODO: ストリーク更新
-    //    将来的に RPC(upsert_daily_log) に集約予定
-    // -----------------------------
 
     // -----------------------------
     // 8. キャッシュ再検証
