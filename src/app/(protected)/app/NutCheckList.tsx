@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { Nut, ActionResult } from '@/lib/types';
@@ -23,8 +23,15 @@ interface NutCheckListProps {
  */
 export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckListProps) {
   const router = useRouter();
+
+  // 保存中のUI制御（disabled / ボタン文言など）
   const [isPending, startTransition] = useTransition();
+
+  // 保存結果メッセージ表示用
   const [result, setResult] = useState<ActionResult | null>(null);
+
+  // 「保存しました」などの表示を一定時間後に消すためのタイマー参照
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // selectedNutIds を number[] に正規化（bigint列に合わせる）
   const initialSelected = useMemo(() => {
@@ -36,11 +43,17 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
   // 選択されたナッツIDを管理するローカル状態（numberで統一）
   const [selected, setSelected] = useState<number[]>(initialSelected);
 
-  // ★ 重要：props が変わったら state を同期し直す（保存後の refresh / 日付移動でも崩れない）
+  // ★重要：props が変わったら state を同期し直す（保存後の refresh / 日付移動でも崩れない）
   useEffect(() => {
     setSelected(initialSelected);
-    setResult(null);
   }, [initialSelected, date]);
+
+  // コンポーネント破棄時にタイマーを掃除（メモリリーク防止）
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, []);
 
   // ナッツの選択状態を切り替える
   const toggleSelection = (nutId: number) => {
@@ -60,6 +73,15 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
         setResult(res);
 
         if (res.success) {
+          // 既存タイマーがあればクリア（連続保存でも表示時間が正しくなる）
+          if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+
+          // 2秒後にメッセージを消す
+          hideTimerRef.current = setTimeout(() => {
+            setResult(null);
+          }, 2000);
+
+          // サーバー側データを最新にする（選択済み状態など）
           router.refresh();
         }
       } catch (error) {
@@ -80,7 +102,9 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
         {nuts.map((nut) => {
           // nuts.id が number（bigint由来）想定。念のため変換。
           const nutId =
-            typeof (nut as any).id === 'string' ? Number((nut as any).id) : (nut as any).id;
+            typeof (nut as any).id === 'string'
+              ? Number((nut as any).id)
+              : ((nut as any).id as number);
 
           const checked = selected.includes(nutId);
 
@@ -98,7 +122,6 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
                 className="w-5 h-5"
               />
 
-              {/* 画像は無ければエラーになるので、初版要件なら表示を抑制してOK */}
               {nut.image_path ? (
                 <div className="relative w-16 h-16 overflow-hidden">
                   <Image
@@ -114,7 +137,9 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
 
               <div>
                 <h3 className="font-medium">{nut.name}</h3>
-                {nut.description && <p className="text-sm text-gray-600">{nut.description}</p>}
+                {nut.description ? (
+                  <p className="text-sm text-gray-600">{nut.description}</p>
+                ) : null}
               </div>
             </label>
           );
@@ -130,7 +155,7 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
           {isPending ? '保存中...' : '保存する'}
         </button>
 
-        {result && (
+        {result ? (
           <div
             className={`mt-2 p-2 rounded ${
               result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -138,7 +163,7 @@ export default function NutCheckList({ nuts, selectedNutIds, date }: NutCheckLis
           >
             {result.message}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
