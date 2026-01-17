@@ -2,7 +2,7 @@
  * ナッツマスター情報の型定義
  */
 export type Nut = {
-  id: string;
+  id: number;
   slug: string;
   name: string;
   description: string | null;
@@ -11,7 +11,7 @@ export type Nut = {
   score_mineral: number;
   score_fiber: number;
   score_vitamin: number;
-  score_variety: number;
+  score_variety?: number | null;
   created_at: string;
   updated_at: string;
 };

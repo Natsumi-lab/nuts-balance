@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { Nut, Streak, DailyLogData } from "@/lib/types";
+import { Nut, DailyLogData } from "@/lib/types";
 import NutCheckList from "./NutCheckList";
 import DateSelector from "./DateSelector";
 import UserInfo from "./UserInfo";
