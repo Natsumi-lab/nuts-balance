@@ -3,29 +3,17 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-export async function signInWithPassword(formData: FormData) {
+export async function signInWithPassword(formData: FormData): Promise<void> {
   const email = String(formData.get('email') ?? '');
   const password = String(formData.get('password') ?? '');
 
-  if (!email || !password) {
-    return {
-      ok: false,
-      message: 'メールアドレスとパスワードを入力してください。',
-    };
-  }
+  const supabase = await createClient();
 
-const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return {
-      ok: false,
-      message: error.message,
-    };
+    // エラーを出したい場合は searchParams などで扱えるようにリダイレクト
+    redirect(`/auth/login?error=${encodeURIComponent(error.message)}`);
   }
 
   // 成功したら /app へ
