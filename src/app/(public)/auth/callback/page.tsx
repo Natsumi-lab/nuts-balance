@@ -1,18 +1,23 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Next.js 側の生成型（PageProps）に合わせて searchParams は Promise として受け取る。
+ */
 type CallbackPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     code?: string;
     next?: string;
-  };
+  }>;
 };
 
 export default async function CallbackPage({
   searchParams,
 }: CallbackPageProps) {
-  const code = searchParams?.code;
-  const next = searchParams?.next ?? "/app";
+  // searchParams を await してから使う
+  const params = await searchParams;
+  const code = params?.code;
+  const next = params?.next ?? "/app";
 
   // code が無い場合はログインへ
   if (!code) {
