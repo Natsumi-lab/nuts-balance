@@ -106,11 +106,7 @@ export default function NutCheckList({
 
       <div className="space-y-4">
         {nuts.map((nut) => {
-          // nuts.id が number（bigint由来）想定。念のため変換。
-          const nutId =
-            typeof (nut as any).id === "string"
-              ? Number((nut as any).id)
-              : ((nut as any).id as number);
+          const nutId = nut.id;
 
           const checked = selected.includes(nutId);
 
@@ -119,7 +115,7 @@ export default function NutCheckList({
               key={String(nutId)}
               className="flex items-center space-x-4 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
             >
-              {/* ★ onClick と onChange の二重toggleをやめて、input のみで切り替える */}
+              {/* onClick と onChange の二重toggleをやめて、input のみで切り替える */}
               <input
                 type="checkbox"
                 checked={checked}
