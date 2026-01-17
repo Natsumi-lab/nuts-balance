@@ -1,9 +1,24 @@
-import { signInWithPassword } from './actions';
+import { signInWithPassword } from "./actions";
 
-export default function LoginPage() {
+type PageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const error = params?.error;
+
   return (
     <div className="mx-auto max-w-sm p-6">
       <h1 className="text-2xl font-bold">ログイン</h1>
+
+      {error ? (
+        <div className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
       <form action={signInWithPassword} className="mt-6 space-y-4">
         <div>
@@ -13,6 +28,7 @@ export default function LoginPage() {
             type="email"
             required
             className="mt-1 w-full rounded border px-3 py-2"
+            autoComplete="email"
           />
         </div>
 
@@ -23,6 +39,7 @@ export default function LoginPage() {
             type="password"
             required
             className="mt-1 w-full rounded border px-3 py-2"
+            autoComplete="current-password"
           />
         </div>
 
