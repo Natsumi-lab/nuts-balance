@@ -39,10 +39,15 @@ jobs:
 
       # Build（Next.jsのビルドで壊れてないか確認）
       # Supabase系の環境変数がビルド時に必要なら GitHub Secrets に設定してここで渡す
-      - name: Build
+      - name: Debug env exists
         run: |
           node -e "console.log('URL:', !!process.env.NEXT_PUBLIC_SUPABASE_URL); console.log('ANON:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)"
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
