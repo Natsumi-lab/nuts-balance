@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature-branch
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      # Lint（スクリプトが無い場合も落とさない）
+      - name: Lint
+        run: npm run lint --if-present
+
+      # Type check（あるなら実行。無いなら落とさない）
+      - name: Typecheck
+        run: npm run typecheck --if-present
+
+      # Unit test（あるなら実行。無いなら落とさない）
+      - name: Test
+        run: npm test --if-present
+
+      # Build（Next.jsのビルドで壊れてないか確認）
+      # Supabase系の環境変数がビルド時に必要なら GitHub Secrets に設定してここで渡す
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
