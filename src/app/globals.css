@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
+/* Light theme variables in HSL format based on organic farm palette */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base colors */
+  --background: 150 20% 92%;          /* Sage Green base */
+  --foreground: 15 15% 20%;           /* Dark Brown text */
+
+  /* Card component colors */
+  --card: 150 15% 97%;                /* Lighter Sage Green */
+  --card-foreground: 15 15% 20%;      /* Dark Brown text */
+
+  /* Popover/dropdown colors */
+  --popover: 150 15% 97%;             /* Lighter Sage Green */
+  --popover-foreground: 15 15% 20%;   /* Dark Brown text */
+
+  /* Primary action colors */
+  --primary: 147 25% 46%;             /* Deep Green */
+  --primary-foreground: 0 0% 100%;    /* White text */
+
+  /* Secondary action colors */
+  --secondary: 160 15% 73%;           /* Light Green */
+  --secondary-foreground: 15 20% 15%; /* Darker Brown text */
+
+  /* Muted/subtle UI elements */
+  --muted: 150 10% 86%;               /* Desaturated Sage Green */
+  --muted-foreground: 160 10% 40%;    /* Greyish Green text */
+
+  /* Accent/highlight colors */
+  --accent: 39 93% 48%;               /* Harvest Yellow */
+  --accent-foreground: 15 20% 15%;    /* Darker Brown text */
+
+  /* UI element borders */
+  --border: 150 15% 80%;              /* Light Green border */
+
+  /* Form input backgrounds */
+  --input: 150 10% 90%;               /* Very Light Sage */
+
+  /* Focus rings */
+  --ring: 30 80% 56%;                 /* Warm Orange */
+
+  /* Border radius */
+  --radius: 0.5rem;
 }
 
+/* Theme inline values that use the CSS variables */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark theme variables - uses class-based approach instead of prefers-color-scheme */
+.dark {
+  /* Base colors */
+  --background: 150 15% 15%;          /* Very Dark Sage */
+  --foreground: 150 10% 90%;          /* Light Sage text */
+
+  /* Card component colors */
+  --card: 150 15% 18%;                /* Dark Sage Green */
+  --card-foreground: 150 10% 92%;     /* Light Sage text */
+
+  /* Popover/dropdown colors */
+  --popover: 150 15% 18%;             /* Dark Sage Green */
+  --popover-foreground: 150 10% 92%;  /* Light Sage text */
+
+  /* Primary action colors */
+  --primary: 147 30% 35%;             /* Darker Deep Green */
+  --primary-foreground: 0 0% 95%;     /* Off-white text */
+
+  /* Secondary action colors */
+  --secondary: 160 15% 25%;           /* Dark Light Green */
+  --secondary-foreground: 150 10% 90%;/* Light Sage text */
+
+  /* Muted/subtle UI elements */
+  --muted: 150 10% 25%;               /* Dark Desaturated Sage */
+  --muted-foreground: 150 5% 65%;     /* Lighter Greyish Green */
+
+  /* Accent/highlight colors */
+  --accent: 39 70% 40%;               /* Darker Harvest Yellow */
+  --accent-foreground: 0 0% 95%;      /* Off-white text */
+
+  /* UI element borders */
+  --border: 150 15% 30%;              /* Dark Light Green border */
+
+  /* Form input backgrounds */
+  --input: 150 15% 20%;               /* Dark Sage */
+
+  /* Focus rings */
+  --ring: 30 70% 45%;                 /* Darker Warm Orange */
 }
 
+/* Base styles using variables */
 body {
-  background: rgb(203, 244, 238);
-  color: black;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }

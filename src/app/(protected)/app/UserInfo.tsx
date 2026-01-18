@@ -1,4 +1,6 @@
-'use client';
+"use client";
+
+import Image from "next/image";
 
 /**
  * UserInfoコンポーネントのプロパティ型
@@ -13,12 +15,23 @@ interface UserInfoProps {
  */
 export default function UserInfo({ streak }: UserInfoProps) {
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">マイキャラクター</h2>
+    <div className="px-5 py-6">
+      {/* キャラクターエリア */}
+      <div className="flex flex-col items-center">
+        <div className="relative w-full max-w-sm mx-auto aspect-[3/4]">
+          <Image
+            src="/nuts/5almond-flower.png"
+            alt="ナッツキャラクター"
+            fill
+            sizes="(max-width: 768px) 90vw, 320px"
+            className="object-contain drop-shadow-sm"
+            priority
+          />
+        </div>
 
-      {/* キャラクタープレースホルダー */}
-      <div className="h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
-        <p className="text-gray-500">キャラクター表示予定</p>
+        <p className="text-sm text-muted-foreground">
+          あなたのナッツキャラクター
+        </p>
       </div>
 
       {/* ストリーク表示 */}

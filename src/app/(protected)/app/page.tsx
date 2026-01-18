@@ -21,9 +21,22 @@ interface PageProps {
  */
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div className="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold">エラーが発生しました</h2>
-      <p>{message}</p>
+    <div className="border rounded-lg shadow-sm p-5 border-accent/20 bg-muted/20">
+      <div className="pb-2 border-b border-border/30">
+        <h3 className="text-lg font-semibold text-accent-foreground">
+          エラーが発生しました
+        </h3>
+      </div>
+      <div className="pt-4">
+        <p className="text-muted-foreground">{message}</p>
+        <div className="mt-4">
+          <button
+            className="px-4 py-2 rounded-md border border-border text-sm bg-card hover:bg-muted/50 transition-colors"
+            onClick={() => window.location.reload()}>
+            再読み込み
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -33,8 +46,13 @@ function ErrorMessage({ message }: { message: string }) {
  */
 function LoadingPlaceholder() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+    <div className="bg-card/50 border border-border/50 rounded-lg shadow-sm">
+      <div className="flex items-center justify-center h-64 p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">読み込み中...</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -128,34 +146,54 @@ export default async function Page({ searchParams }: PageProps) {
     const { nuts, dailyLogData, streak } = await fetchDailyData(date);
 
     return (
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-8 text-center">
-          ナッツバランス記録
-        </h1>
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-primary mb-2">
+            ナッツバランス記録
+          </h1>
+          <p className="text-muted-foreground">オーガニックナッツの摂取バランスを記録して健康管理をサポート</p>
+          <div className="h-px mt-6 bg-border/60 max-w-xl mx-auto"></div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* 左カラム: 日付選択 */}
-          <div className="space-y-4">
-            <DateSelector date={date} />
-            <CalendarPicker selectedDate={date} />
+          <div className="bg-card/80 border border-border/70 rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-muted/30 border-b border-border/30 pb-3 p-4">
+              <h3 className="text-lg font-semibold text-foreground/90">日付選択</h3>
+            </div>
+            <div className="p-4 space-y-6 pt-5">
+              <DateSelector date={date} />
+              <div className="h-px my-4 bg-border/40"></div>
+              <CalendarPicker selectedDate={date} />
+            </div>
           </div>
 
           {/* 中央カラム: ナッツチェックリスト */}
-          <div>
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <NutCheckList
-                nuts={nuts}
-                selectedNutIds={dailyLogData.selectedNutIds}
-                date={date}
-              />
-            </Suspense>
+          <div className="bg-card/80 border border-primary/10 rounded-lg shadow-md md:col-span-1">
+            <div className="bg-primary/5 border-b border-primary/10 pb-3 p-4">
+              <h3 className="text-lg font-semibold text-primary-foreground/90">今日のナッツ記録</h3>
+            </div>
+            <div className="p-0 pt-1">
+              <Suspense fallback={<LoadingPlaceholder />}>
+                <NutCheckList
+                  nuts={nuts}
+                  selectedNutIds={dailyLogData.selectedNutIds}
+                  date={date}
+                />
+              </Suspense>
+            </div>
           </div>
 
           {/* 右カラム: ユーザー情報 */}
-          <div>
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <UserInfo streak={streak} />
-            </Suspense>
+          <div className="bg-card/80 border border-secondary/20 rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-secondary/5 border-b border-secondary/10 pb-3 p-4">
+              <h3 className="text-lg font-semibold text-secondary-foreground/90">マイプロフィール</h3>
+            </div>
+            <div className="p-0">
+              <Suspense fallback={<LoadingPlaceholder />}>
+                <UserInfo streak={streak} />
+              </Suspense>
+            </div>
           </div>
         </div>
       </main>
@@ -163,9 +201,18 @@ export default async function Page({ searchParams }: PageProps) {
   } catch (error) {
     console.error("ページ表示エラー:", error);
     return (
-      <div className="container mx-auto px-4 py-8">
-        <ErrorMessage message="データの読み込み中にエラーが発生しました。しばらくしてから再度お試しください。" />
-      </div>
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-primary mb-2">
+            ナッツバランス記録
+          </h1>
+          <div className="h-px mt-6 bg-border/60 max-w-xl mx-auto"></div>
+        </div>
+
+        <div className="max-w-lg mx-auto mt-12">
+          <ErrorMessage message="データの読み込み中にエラーが発生しました。しばらくしてから再度お試しください。" />
+        </div>
+      </main>
     );
   }
 }
