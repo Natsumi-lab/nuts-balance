@@ -47,17 +47,16 @@ export default function DateSelector({ date }: DateSelectorProps) {
   const isNextDayDisabled = date >= today;
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">日付選択</h2>
-
-      <div className="text-center mb-4">
-        <div className="text-lg font-medium">{formatDateForDisplay(date)}</div>
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-[#E6E6E4]">
+      <div className="text-center mb-5">
+        <div className="text-xl font-medium text-[#333]">{formatDateForDisplay(date)}</div>
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-3">
         <button
           onClick={goToPreviousDay}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+          className="flex-1 bg-gradient-to-br from-[#E38B3A]/90 to-[#E38B3A] text-white px-4 py-2.5 rounded-xl hover:shadow-md hover:from-[#E38B3A] hover:to-[#E38B3A] transition-all duration-300 text-sm font-medium"
+          aria-label="前の日へ"
         >
           前日
         </button>
@@ -65,7 +64,8 @@ export default function DateSelector({ date }: DateSelectorProps) {
         <button
           onClick={goToNextDay}
           disabled={isNextDayDisabled}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
+          className="flex-1 bg-gradient-to-br from-[#E38B3A]/90 to-[#E38B3A] text-white px-4 py-2.5 rounded-xl hover:shadow-md hover:from-[#E38B3A] hover:to-[#E38B3A] transition-all duration-300 text-sm font-medium disabled:from-[#AAA] disabled:to-[#AAA] disabled:cursor-not-allowed"
+          aria-label="次の日へ"
         >
           翌日
         </button>

@@ -120,11 +120,9 @@ export default function NutCheckList({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold mb-4">今日のナッツ記録</h2>
-
-      {/* リスト */}
-      <div className="space-y-2">
+    <div className="bg-white p-5 rounded-xl shadow-sm">
+      {/* リスト - 見出しを削除し親のh3をメインの見出しとして活用 */}
+      <div className="space-y-3">
         {nuts.map((nut) => {
           const nutId = nut.id;
           const checked = selected.includes(nutId);
@@ -137,23 +135,37 @@ export default function NutCheckList({
             <label
               key={String(nutId)}
               className={[
-                "flex items-start gap-3 rounded-xl px-3 py-2 cursor-pointer transition-colors",
-                checked ? "bg-green-50" : "hover:bg-gray-100/70",
+                "flex items-start gap-4 rounded-xl px-4 py-3 cursor-pointer transition-all",
+                checked
+                  ? "bg-[#E6F1EC]/60 border border-[#9FBFAF]/30 shadow-sm"
+                  : "hover:bg-[#FAFAFA] border border-transparent hover:border-[#E6E6E4]/70",
                 isPending ? "opacity-70 cursor-not-allowed" : "",
               ].join(" ")}
             >
-              {/* onClick と onChange の二重toggleをやめて、input のみで切り替える */}
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggleSelection(nutId)}
-                disabled={isPending}
-                className="mt-2 w-5 h-5"
-              />
+              {/* チェックボックス */}
+              <div className="mt-1.5 relative">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleSelection(nutId)}
+                  disabled={isPending}
+                  className="sr-only peer" // 非表示にして独自スタイルで表現
+                  id={`nut-${nutId}`}
+                />
+                <div className="w-6 h-6 bg-white border-2 border-[#9FBFAF] rounded-md peer-checked:bg-[#E38B3A] peer-checked:border-[#E38B3A] transition-colors"></div>
+                {/* チェック時のアイコン */}
+                {checked && (
+                  <div className="absolute inset-0 flex items-center justify-center text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </div>
 
               {/* miniアイコン（public/nuts の固定画像） */}
               {miniSrc ? (
-                <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5">
+                <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm border border-[#E6E6E4]/80">
                   <Image
                     src={miniSrc}
                     alt={nut.name}
@@ -164,18 +176,18 @@ export default function NutCheckList({
                 </div>
               ) : (
                 // 対応表に無い場合でもレイアウトが崩れないようプレースホルダーを出す
-                <div className="w-12 h-12 shrink-0 rounded-xl bg-gray-100 ring-1 ring-black/5 flex items-center justify-center">
-                  <span className="text-[10px] text-gray-500">no img</span>
+                <div className="w-16 h-16 shrink-0 rounded-xl bg-[#F8F8F6] border border-[#E6E6E4]/80 flex items-center justify-center">
+                  <span className="text-[10px] text-[#999]">no img</span>
                 </div>
               )}
 
               {/* テキスト */}
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900 leading-5">
+                <h3 className="font-medium text-[#333] leading-6">
                   {nut.name}
                 </h3>
                 {nut.description ? (
-                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
+                  <p className="text-sm text-[#555] leading-relaxed mt-1.5">
                     {nut.description}
                   </p>
                 ) : null}
@@ -186,11 +198,11 @@ export default function NutCheckList({
       </div>
 
       {/* 保存ボタン + 結果表示 */}
-      <div className="mt-6">
+      <div className="mt-8">
         <button
           onClick={saveSelection}
           disabled={isPending}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg w-full hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+          className="bg-gradient-to-br from-[#F2B705] to-[#E38B3A] text-white px-5 py-3 rounded-xl w-full hover:shadow-md font-medium disabled:from-[#AAA] disabled:to-[#999] transition-all"
         >
           {isPending ? "保存中..." : "保存する"}
         </button>
@@ -198,10 +210,10 @@ export default function NutCheckList({
         {result ? (
           <div
             className={[
-              "mt-2 p-2 rounded text-sm",
+              "mt-3 p-3 rounded-xl text-sm shadow-sm border",
               result.success
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800",
+                ? "bg-[#E6F1EC]/40 text-[#5E8F76] border-[#9FBFAF]/30"
+                : "bg-[#FEE]/40 text-[#C53030] border-[#FEE]/80",
             ].join(" ")}
           >
             {result.message}
