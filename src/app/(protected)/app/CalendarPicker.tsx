@@ -9,16 +9,6 @@ type Props = {
   selectedDate: string; // YYYY-MM-DD
 };
 
-const weekdayLabels = {
-  0: "日",
-  1: "月",
-  2: "火",
-  3: "水",
-  4: "木",
-  5: "金",
-  6: "土",
-} as const;
-
 export default function CalendarPicker({ selectedDate }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,10 +33,6 @@ export default function CalendarPicker({ selectedDate }: Props) {
       <style jsx global>{`
         /* =========================================================
            Nuts Balance Calendar (react-day-picker)
-           方針：
-           - 青いリング（アクセント/フォーカス）は無理に消さない
-           - 選択日の「塗り」を青リングに合う色へ変更して調和させる
-           - 影・角丸などの“カード感”は最低限の上書きに集約
         ========================================================= */
 
         /* 余白の初期化（カレンダー内だけに作用） */
@@ -127,7 +113,7 @@ export default function CalendarPicker({ selectedDate }: Props) {
           transform: translateY(0px) scale(0.98);
         }
 
-        /* ✅ 選択日：スカイ*/
+        /* ✅ 選択日：スカイ */
         .nb-calendar .rdp-day[aria-selected="true"] {
           color: #fff !important;
           background: linear-gradient(
@@ -152,13 +138,6 @@ export default function CalendarPicker({ selectedDate }: Props) {
         weekStartsOn={1}
         disabled={{ after: new Date() }}
         locale={ja}
-        formatters={{
-          // 曜日を「月火水木金土日」に固定
-          formatWeekday: (weekday) => {
-            const day = weekday.getDay();
-            return weekdayLabels[day as keyof typeof weekdayLabels];
-          },
-        }}
       />
     </div>
   );
