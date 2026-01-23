@@ -3,39 +3,27 @@
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ja } from 'date-fns/locale';
-import { useState, useEffect } from "react";
+import { ja } from "date-fns/locale";
 
 type Props = {
   selectedDate: string; // YYYY-MM-DD
 };
 
-// 曜日を日本語表記に変更するためのカスタムフォーマット
 const weekdayLabels = {
-  0: '日',
-  1: '月',
-  2: '火',
-  3: '水',
-  4: '木',
-  5: '金',
-  6: '土',
+  0: "日",
+  1: "月",
+  2: "火",
+  3: "水",
+  4: "木",
+  5: "金",
+  6: "土",
 };
 
 export default function CalendarPicker({ selectedDate }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mounted, setMounted] = useState(false);
-
-  // クライアントサイドでのみレンダリング
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const selected = new Date(selectedDate);
-
-  // 今日の日付
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   const onSelect = (date?: Date) => {
     if (!date) return;
@@ -43,69 +31,103 @@ export default function CalendarPicker({ selectedDate }: Props) {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
-
     const nextDate = `${yyyy}-${mm}-${dd}`;
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", nextDate);
-
     router.push(`/app?${params.toString()}`);
   };
 
-  // DayPickerのカスタムスタイル
-  const dayPickerClassNames = {
-    months: "flex flex-col space-y-4",
-    month: "space-y-4",
-    caption: "flex justify-center relative items-center px-2",
-    caption_label: "text-base font-medium text-[#333]",
-    nav: "flex items-center space-x-1",
-    nav_button: "h-8 w-8 bg-[#F8F8F6] hover:bg-[#E6F1EC] text-[#5E8F76] rounded-full flex items-center justify-center transition-colors",
-    nav_button_previous: "absolute left-1",
-    nav_button_next: "absolute right-1",
-    table: "w-full border-collapse",
-    head_row: "flex w-full justify-between py-2",
-    head_cell: "text-[#5E8F76] font-medium text-center w-10",
-    row: "flex w-full justify-between mt-1",
-    cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
-    day: "h-9 w-9 p-0 font-normal rounded-full hover:bg-[#E6F1EC] hover:text-[#333] flex items-center justify-center transition-colors",
-    day_selected: "bg-gradient-to-br from-[#F2B705] to-[#E38B3A] text-white hover:bg-none hover:text-white font-semibold shadow-sm",
-    day_today: "border border-[#9FBFAF] bg-[#FAFAF8] font-semibold",
-    day_outside: "text-[#AAA] opacity-50",
-    day_disabled: "text-[#CCC]",
-    day_hidden: "invisible",
-  };
-
-  if (!mounted) {
-    return <div className="rounded-xl border border-[#E6E6E4] p-3 bg-white h-64 animate-pulse"></div>;
-  }
-
   return (
-    <div className="rounded-xl border border-[#E6E6E4] p-3 bg-white shadow-sm">
+    <div className="rounded-2xl border border-[#E6E6E4] bg-white/75 p-4 shadow-lg ring-1 ring-black/5">
       <style jsx global>{`
+        /* --- ベース --- */
+        .rdp {
+          margin: 0;
+        }
         .rdp-month {
           width: 100%;
         }
+
+        /* --- 見出し（Pixarっぽい“カード感”） --- */
         .rdp-caption {
+          position: relative;
           margin-bottom: 0.75rem;
+          padding: 0.5rem 0.75rem;
+          border-radius: 1rem;
+          background: rgba(250, 250, 248, 0.85);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .rdp-caption_label {
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          color: #2f5d4a;
+          font-size: 0.95rem;
+        }
+
+        /* --- ナビ（左右ボタン） --- */
+        .rdp-nav_button {
+          width: 2.25rem;
+          height: 2.25rem;
+          border-radius: 9999px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+          color: #2f5d4a;
+        }
+        .rdp-nav_button:hover {
+          background: rgba(230, 241, 236, 0.9);
+        }
+
+        /* --- 曜日ラベル --- */
+        .rdp-head_cell {
+          color: #6b7f75;
+          font-weight: 700;
+          font-size: 0.75rem;
+          padding-bottom: 0.35rem;
+        }
+
+        /* --- 日付ボタン --- */
+        .rdp-day {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 9999px;
+          font-weight: 600;
+          color: #3b2f2a;
+        }
+        .rdp-day:hover {
+          background: rgba(230, 241, 236, 0.9);
+          box-shadow: 0 10px 18px rgba(0, 0, 0, 0.06);
+        }
+
+        /* ✅ 選択日：オレンジ〜イエローのグラデ（強制） */
+        .rdp-day[aria-selected="true"] {
+          color: #fff !important;
+          background: linear-gradient(135deg, #f2b705, #e38b3a) !important;
+          box-shadow: 0 12px 22px rgba(227, 139, 58, 0.28) !important;
+        }
+
+        /* ✅ 今日：ライトグリーンのリング（強制） */
+        .rdp-day_today:not([aria-selected="true"]) {
+          outline: 2px solid rgba(159, 191, 175, 1) !important; /* #9FBFAF */
+          outline-offset: 2px !important;
+          background: rgba(250, 250, 248, 0.9) !important;
         }
       `}</style>
+
       <DayPicker
         mode="single"
         selected={selected}
         onSelect={onSelect}
-        weekStartsOn={1} // 月曜始まり
-        disabled={{ after: new Date() }} // 未来日を選択不可
+        weekStartsOn={1}
+        disabled={{ after: new Date() }}
         locale={ja}
-        classNames={dayPickerClassNames}
         formatters={{
           formatWeekday: (weekday) => {
             const day = weekday.getDay();
             return weekdayLabels[day as keyof typeof weekdayLabels];
-          }
-        }}
-        modifiersClassNames={{
-          selected: "day-selected",
-          today: "day-today",
+          },
         }}
       />
     </div>
