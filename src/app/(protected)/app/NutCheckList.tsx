@@ -17,6 +17,22 @@ interface NutCheckListProps {
   date: string;
 }
 
+const MINI_NUT_IMAGE_MAP: Record<string, string> = {
+  アーモンド: "/nuts/mini-almond.png",
+  くるみ: "/nuts/mini-walnuts.png",
+  カシューナッツ: "/nuts/mini-cashew.png",
+  ピスタチオ: "/nuts/mini-pistachio.png",
+  マカダミアナッツ: "/nuts/mini-macadamia.png",
+  ヘーゼルナッツ: "/nuts/mini-hazel.png",
+};
+
+/**
+ * 表記ゆれ対策：空白を除去して比較しやすくする
+ */
+function normalizeNutName(name: string) {
+  return name.replace(/\s+/g, "").trim();
+}
+
 /**
  * ナッツチェックリストコンポーネント
  * ナッツの選択と保存機能を提供
@@ -37,7 +53,10 @@ export default function NutCheckList({
   // 「保存しました」などの表示を一定時間後に消すためのタイマー参照
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // selectedNutIds を number[] に正規化（bigint列に合わせる）
+  /**
+   * selectedNutIds を number[] に正規化（bigint列に合わせる）
+   * - Supabaseから string/number が混在しても同じロジックで扱えるようにする
+   */
   const initialSelected = useMemo(() => {
     return selectedNutIds
       .map((v) => (typeof v === "string" ? Number(v) : v))
@@ -47,7 +66,7 @@ export default function NutCheckList({
   // 選択されたナッツIDを管理するローカル状態（numberで統一）
   const [selected, setSelected] = useState<number[]>(initialSelected);
 
-  // ★重要：props が変わったら state を同期し直す（保存後の refresh / 日付移動でも崩れない）
+  // 重要：props が変わったら state を同期し直す（保存後の refresh / 日付移動でも崩れない）
   useEffect(() => {
     setSelected(initialSelected);
   }, [initialSelected, date]);
@@ -64,7 +83,7 @@ export default function NutCheckList({
     setSelected((prev) =>
       prev.includes(nutId)
         ? prev.filter((id) => id !== nutId)
-        : [...prev, nutId]
+        : [...prev, nutId],
     );
   };
 
@@ -102,18 +121,26 @@ export default function NutCheckList({
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">今日のナッツ記録</h2>
+      <h2 className="text-lg font-semibold mb-4">今日のナッツ記録</h2>
 
-      <div className="space-y-4">
+      {/* リスト */}
+      <div className="space-y-2">
         {nuts.map((nut) => {
           const nutId = nut.id;
-
           const checked = selected.includes(nutId);
+
+          // mini画像のパスを決定（DBではなく対応表で固定）
+          const normalized = normalizeNutName(nut.name);
+          const miniSrc = MINI_NUT_IMAGE_MAP[normalized];
 
           return (
             <label
               key={String(nutId)}
-              className="flex items-center space-x-4 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+              className={[
+                "flex items-start gap-3 rounded-xl px-3 py-2 cursor-pointer transition-colors",
+                checked ? "bg-green-50" : "hover:bg-gray-100/70",
+                isPending ? "opacity-70 cursor-not-allowed" : "",
+              ].join(" ")}
             >
               {/* onClick と onChange の二重toggleをやめて、input のみで切り替える */}
               <input
@@ -121,26 +148,36 @@ export default function NutCheckList({
                 checked={checked}
                 onChange={() => toggleSelection(nutId)}
                 disabled={isPending}
-                className="w-5 h-5"
+                className="mt-2 w-5 h-5"
               />
 
-              {nut.image_path ? (
-                <div className="relative w-16 h-16 overflow-hidden">
+              {/* miniアイコン（public/nuts の固定画像） */}
+              {miniSrc ? (
+                <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5">
                   <Image
-                    src={nut.image_path}
+                    src={miniSrc}
                     alt={nut.name}
-                    width={80}
-                    height={80}
-                    className="object-cover"
-                    unoptimized
+                    fill
+                    sizes="64px"
+                    className="object-contain"
                   />
                 </div>
-              ) : null}
+              ) : (
+                // 対応表に無い場合でもレイアウトが崩れないようプレースホルダーを出す
+                <div className="w-12 h-12 shrink-0 rounded-xl bg-gray-100 ring-1 ring-black/5 flex items-center justify-center">
+                  <span className="text-[10px] text-gray-500">no img</span>
+                </div>
+              )}
 
-              <div>
-                <h3 className="font-medium">{nut.name}</h3>
+              {/* テキスト */}
+              <div className="min-w-0">
+                <h3 className="font-medium text-gray-900 leading-5">
+                  {nut.name}
+                </h3>
                 {nut.description ? (
-                  <p className="text-sm text-gray-600">{nut.description}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed mt-1">
+                    {nut.description}
+                  </p>
                 ) : null}
               </div>
             </label>
@@ -148,22 +185,24 @@ export default function NutCheckList({
         })}
       </div>
 
+      {/* 保存ボタン + 結果表示 */}
       <div className="mt-6">
         <button
           onClick={saveSelection}
           disabled={isPending}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg w-full hover:bg-green-700 disabled:bg-gray-400"
+          className="bg-green-600 text-white px-4 py-2 rounded-lg w-full hover:bg-green-700 disabled:bg-gray-400 transition-colors"
         >
           {isPending ? "保存中..." : "保存する"}
         </button>
 
         {result ? (
           <div
-            className={`mt-2 p-2 rounded ${
+            className={[
+              "mt-2 p-2 rounded text-sm",
               result.success
                 ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
+                : "bg-red-100 text-red-800",
+            ].join(" ")}
           >
             {result.message}
           </div>
