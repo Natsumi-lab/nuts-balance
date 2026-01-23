@@ -35,7 +35,7 @@ export default function UserInfo({ streak }: UserInfoProps) {
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-[#333]">継続記録</h3>
           <div className="flex items-center gap-1">
-            <span className="text-[#C7372F]">
+            <span className="text-[#D84A3A]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5"
@@ -49,7 +49,7 @@ export default function UserInfo({ streak }: UserInfoProps) {
                 />
               </svg>
             </span>
-            <div className="ml-1 text-2xl font-bold text-[#C7372F]">
+            <div className="ml-1 text-2xl font-bold text-[#D84A3A]">
               {streak} 日
             </div>
           </div>

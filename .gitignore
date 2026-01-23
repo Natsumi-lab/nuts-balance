@@ -52,10 +52,16 @@ next-env.d.ts
 
 # Supabase
 /supabase/temp
+.branches
+.temp
+.functions
 
 # OS specific
 .DS_Store
 Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
 
 # Logs
 logs/
@@ -63,12 +69,15 @@ logs/
 
 # Next.js cache
 .swc/
+.turbo/
 
 # CLAUDE.md is for project configuration
 CLAUDE.md
 
 # Temp files
 *.tmp
+.cache/
+.eslintcache
 
 # Claude Code / MCP
 mcp.json
@@ -78,3 +87,25 @@ mcp.json
 .claude/settings.local.json
 .serena/
 
+# Testing
+/cypress/videos/
+/cypress/screenshots/
+
+# PWA files
+**/public/sw.js
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/fallback-*.js
+**/public/precache-manifest.*.js
+
+# Local Netlify folder
+.netlify
+
+# Storybook
+storybook-static/
+
+# Sentry
+.sentryclirc
+
+# Bundle analyzer
+/analyze/
