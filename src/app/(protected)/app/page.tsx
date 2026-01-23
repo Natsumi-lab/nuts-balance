@@ -151,16 +151,6 @@ export default async function Page({ searchParams }: PageProps) {
     return (
       <main className="min-h-screen px-4 py-8">
         <div className="container mx-auto max-w-7xl">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-[#333] mb-2">
-              Nuts Balance
-            </h1>
-            <p className="text-[#555]">
-              ナッツの摂取バランスを記録して健康管理をサポート
-            </p>
-            <div className="h-px mt-6 bg-white/40 max-w-xl mx-auto"></div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* 左カラム: 日付選択 */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">

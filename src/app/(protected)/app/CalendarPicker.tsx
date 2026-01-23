@@ -127,7 +127,7 @@ export default function CalendarPicker({ selectedDate }: Props) {
           transform: translateY(0px) scale(0.98);
         }
 
-        /* ✅ 選択日：オレンジはやめて、青リングに馴染む“ティール→スカイ”へ */
+        /* ✅ 選択日：スカイ*/
         .nb-calendar .rdp-day[aria-selected="true"] {
           color: #fff !important;
           background: linear-gradient(
@@ -138,7 +138,7 @@ export default function CalendarPicker({ selectedDate }: Props) {
           box-shadow: 0 14px 24px rgba(96, 165, 250, 0.25) !important;
         }
 
-        /* ✅ 今日：背景になじむ控えめなハイライト（※リングは“青が残る”前提なのでここは薄く） */
+        /* ✅ 今日：背景になじむ控えめなハイライト */
         .nb-calendar .rdp-day_today:not([aria-selected="true"]) {
           background: rgba(250, 250, 248, 0.92) !important;
           box-shadow: inset 0 0 0 2px rgba(159, 191, 175, 0.9);
