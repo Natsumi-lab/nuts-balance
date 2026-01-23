@@ -32,7 +32,8 @@ function ErrorMessage({ message }: { message: string }) {
         <div className="mt-5">
           <button
             className="px-5 py-2.5 rounded-xl border border-[#E6E6E4] text-sm bg-white hover:bg-[#F2F2F0] text-[#333] shadow-md transition-all"
-            onClick={() => window.location.reload()}>
+            onClick={() => window.location.reload()}
+          >
             再読み込み
           </button>
         </div>
@@ -144,15 +145,19 @@ export default async function Page({ searchParams }: PageProps) {
   try {
     // データ取得
     const { nuts, dailyLogData, streak } = await fetchDailyData(date);
+    const [y, m, d] = date.split("-").map(Number);
+    const dateLabel = `${m}月${d}日のナッツ記録`;
 
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#E6F1EC] via-[#9FBFAF] to-[#5E8F76] px-4 py-8">
+      <main className="min-h-screen px-4 py-8">
         <div className="container mx-auto max-w-7xl">
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-[#333] mb-2">
-              ナッツバランス記録
+              Nuts Balance
             </h1>
-            <p className="text-[#555]">オーガニックナッツの摂取バランスを記録して健康管理をサポート</p>
+            <p className="text-[#555]">
+              ナッツの摂取バランスを記録して健康管理をサポート
+            </p>
             <div className="h-px mt-6 bg-white/40 max-w-xl mx-auto"></div>
           </div>
 
@@ -170,11 +175,14 @@ export default async function Page({ searchParams }: PageProps) {
             </div>
 
             {/* 中央カラム: ナッツチェックリスト */}
-            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg md:col-span-1">
+            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg md:col-span-1 overflow-hidden">
               <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] pb-3 p-4">
-                <h3 className="text-lg font-semibold text-[#333]">今日のナッツ記録</h3>
+                <h3 className="text-lg font-semibold text-[#333]">
+                  {dateLabel}
+                </h3>
               </div>
-              <div className="p-0 pt-1">
+
+              <div className="p-5">
                 <Suspense fallback={<LoadingPlaceholder />}>
                   <NutCheckList
                     nuts={nuts}
@@ -188,7 +196,9 @@ export default async function Page({ searchParams }: PageProps) {
             {/* 右カラム: ユーザー情報 */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
               <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] pb-3 p-4">
-                <h3 className="text-lg font-semibold text-[#333]">マイプロフィール</h3>
+                <h3 className="text-lg font-semibold text-[#333]">
+                  マイプロフィール
+                </h3>
               </div>
               <div className="p-0">
                 <Suspense fallback={<LoadingPlaceholder />}>
@@ -203,7 +213,7 @@ export default async function Page({ searchParams }: PageProps) {
   } catch (error) {
     console.error("ページ表示エラー:", error);
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#E6F1EC] via-[#9FBFAF] to-[#5E8F76] px-4 py-8">
+      <main className="min-h-screen px-4 py-8">
         <div className="container mx-auto max-w-7xl">
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-[#333] mb-2">

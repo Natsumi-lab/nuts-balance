@@ -156,8 +156,17 @@ export default function NutCheckList({
                 {/* チェック時のアイコン */}
                 {checked && (
                   <div className="absolute inset-0 flex items-center justify-center text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                 )}
@@ -202,7 +211,14 @@ export default function NutCheckList({
         <button
           onClick={saveSelection}
           disabled={isPending}
-          className="bg-gradient-to-br from-[#F2B705] to-[#E38B3A] text-white px-5 py-3 rounded-xl w-full hover:shadow-md font-medium disabled:from-[#AAA] disabled:to-[#999] transition-all"
+          className="w-full rounded-2xl px-6 py-3.5 text-white font-semibold
+            bg-gradient-to-br from-[#F2B705] via-[#E38B3A] to-[#C46A1C]
+            shadow-[0_14px_30px_rgba(0,0,0,0.20)] ring-1 ring-white/30
+            transition-all duration-300 ease-out
+            hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_22px_44px_rgba(0,0,0,0.26)]
+            active:translate-y-0 active:scale-[0.98] active:shadow-[0_10px_22px_rgba(0,0,0,0.18)]
+            disabled:from-[#B9B9B9] disabled:via-[#AFAFAF] disabled:to-[#9B9B9B]
+            disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:cursor-not-allowed"
         >
           {isPending ? "保存中..." : "保存する"}
         </button>

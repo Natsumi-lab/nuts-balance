@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 /**
  * DateSelectorコンポーネントのプロパティ型
@@ -18,7 +18,7 @@ export default function DateSelector({ date }: DateSelectorProps) {
 
   // 表示用に日付をフォーマット（YYYY-MM-DD -> YYYY年MM月DD日）
   const formatDateForDisplay = (dateStr: string): string => {
-    const [year, month, day] = dateStr.split('-');
+    const [year, month, day] = dateStr.split("-");
     return `${year}年${parseInt(month)}月${parseInt(day)}日`;
   };
 
@@ -26,7 +26,7 @@ export default function DateSelector({ date }: DateSelectorProps) {
   const getOffsetDate = (dateStr: string, offset: number): string => {
     const date = new Date(dateStr);
     date.setDate(date.getDate() + offset);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
   // 前日へ移動
@@ -42,20 +42,27 @@ export default function DateSelector({ date }: DateSelectorProps) {
   };
 
   // 今日の日付を取得
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   // 翌日ボタンを無効化する条件（未来の日付は選べないようにする）
   const isNextDayDisabled = date >= today;
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-[#E6E6E4]">
       <div className="text-center mb-5">
-        <div className="text-xl font-medium text-[#333]">{formatDateForDisplay(date)}</div>
+        <div className="text-xl font-medium text-[#333]">
+          {formatDateForDisplay(date)}
+        </div>
       </div>
 
       <div className="flex justify-between gap-3">
         <button
           onClick={goToPreviousDay}
-          className="flex-1 bg-gradient-to-br from-[#E38B3A]/90 to-[#E38B3A] text-white px-4 py-2.5 rounded-xl hover:shadow-md hover:from-[#E38B3A] hover:to-[#E38B3A] transition-all duration-300 text-sm font-medium"
+          className="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold text-white
+            bg-gradient-to-br from-[#F2B705] via-[#E38B3A] to-[#C46A1C]
+            shadow-[0_10px_24px_rgba(0,0,0,0.18)] ring-1 ring-white/30
+            transition-all duration-300 ease-out
+            hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_18px_36px_rgba(0,0,0,0.22)]
+            active:translate-y-0 active:scale-[0.98] active:shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
           aria-label="前の日へ"
         >
           前日
@@ -64,7 +71,14 @@ export default function DateSelector({ date }: DateSelectorProps) {
         <button
           onClick={goToNextDay}
           disabled={isNextDayDisabled}
-          className="flex-1 bg-gradient-to-br from-[#E38B3A]/90 to-[#E38B3A] text-white px-4 py-2.5 rounded-xl hover:shadow-md hover:from-[#E38B3A] hover:to-[#E38B3A] transition-all duration-300 text-sm font-medium disabled:from-[#AAA] disabled:to-[#AAA] disabled:cursor-not-allowed"
+          className="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold text-white
+            bg-gradient-to-br from-[#F2B705] via-[#E38B3A] to-[#C46A1C]
+            shadow-[0_10px_24px_rgba(0,0,0,0.18)] ring-1 ring-white/30
+            transition-all duration-300 ease-out
+            hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_18px_36px_rgba(0,0,0,0.22)]
+            active:translate-y-0 active:scale-[0.98] active:shadow-[0_8px_18px_rgba(0,0,0,0.18)]
+            disabled:from-[#B9B9B9] disabled:via-[#AFAFAF] disabled:to-[#9B9B9B]
+            disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:cursor-not-allowed"
           aria-label="次の日へ"
         >
           翌日

@@ -1,49 +1,72 @@
 @import "tailwindcss";
 
-/* Light theme variables in HSL format based on organic farm palette */
+/* =========================================
+   ライトテーマ（HSL形式）
+========================================= */
 :root {
-  /* Base colors */
-  --background: 150 20% 92%;          /* Sage Green base */
-  --foreground: 15 15% 20%;           /* Dark Brown text */
+  /* 基本の文字色・背景色 */
+  --background: 150 20% 92%;
+  /* セージグリーン系のベース */
+  --foreground: 15 15% 20%;
+  /* ダークブラウン（本文） */
 
-  /* Card component colors */
-  --card: 150 15% 97%;                /* Lighter Sage Green */
-  --card-foreground: 15 15% 20%;      /* Dark Brown text */
+  /* カード（面）の色 */
+  --card: 150 15% 97%;
+  /* 明るめセージ */
+  --card-foreground: 15 15% 20%;
+  /* カード内テキスト */
 
-  /* Popover/dropdown colors */
-  --popover: 150 15% 97%;             /* Lighter Sage Green */
-  --popover-foreground: 15 15% 20%;   /* Dark Brown text */
+  /* ポップオーバー／ドロップダウン */
+  --popover: 150 15% 97%;
+  --popover-foreground: 15 15% 20%;
 
-  /* Primary action colors */
-  --primary: 147 25% 46%;             /* Deep Green */
-  --primary-foreground: 0 0% 100%;    /* White text */
+  /* 主要アクション（ボタン等） */
+  --primary: 147 25% 46%;
+  /* ディープグリーン */
+  --primary-foreground: 0 0% 100%;
+  /* 白 */
 
-  /* Secondary action colors */
-  --secondary: 160 15% 73%;           /* Light Green */
-  --secondary-foreground: 15 20% 15%; /* Darker Brown text */
+  /* サブアクション */
+  --secondary: 160 15% 73%;
+  /* ライトグリーン */
+  --secondary-foreground: 15 20% 15%;
+  /* 濃いブラウン */
 
-  /* Muted/subtle UI elements */
-  --muted: 150 10% 86%;               /* Desaturated Sage Green */
-  --muted-foreground: 160 10% 40%;    /* Greyish Green text */
+  /* 控えめな要素（説明文・薄背景など） */
+  --muted: 150 10% 86%;
+  --muted-foreground: 160 10% 40%;
 
-  /* Accent/highlight colors */
-  --accent: 39 93% 48%;               /* Harvest Yellow */
-  --accent-foreground: 15 20% 15%;    /* Darker Brown text */
+  /* アクセント（強調色） */
+  --accent: 39 93% 48%;
+  /* ハーベストイエロー */
+  --accent-foreground: 15 20% 15%;
 
-  /* UI element borders */
-  --border: 150 15% 80%;              /* Light Green border */
+  /* 枠線 */
+  --border: 150 15% 80%;
 
-  /* Form input backgrounds */
-  --input: 150 10% 90%;               /* Very Light Sage */
+  /* 入力欄の背景 */
+  --input: 150 10% 90%;
 
-  /* Focus rings */
-  --ring: 30 80% 56%;                 /* Warm Orange */
+  /* フォーカスリング */
+  --ring: 30 80% 56%;
+  /* ウォームオレンジ */
 
-  /* Border radius */
+  /* 角丸 */
   --radius: 0.5rem;
+
+  /* =========================================
+     背景グラデーション
+     - HSLで管理しておくとダーク対応もしやすい
+  ========================================= */
+  --bg-top: 150 35% 95%;
+  /* 上：明るいミント */
+  --bg-mid: 150 35% 88%;
+  /* 中：ライトグリーン */
+  --bg-bottom: 125 55% 75%;
+  /* 下：明るめ “恐竜グリーン” 寄り */
 }
 
-/* Theme inline values that use the CSS variables */
+/* Tailwindの theme inline（必要最小限） */
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -51,47 +74,70 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Dark theme variables - uses class-based approach instead of prefers-color-scheme */
+/* =========================================
+   ダークテーマ（.dark クラスで切替）
+========================================= */
 .dark {
-  /* Base colors */
-  --background: 150 15% 15%;          /* Very Dark Sage */
-  --foreground: 150 10% 90%;          /* Light Sage text */
+  /* 基本の文字色・背景色 */
+  --background: 150 15% 15%;
+  --foreground: 150 10% 90%;
 
-  /* Card component colors */
-  --card: 150 15% 18%;                /* Dark Sage Green */
-  --card-foreground: 150 10% 92%;     /* Light Sage text */
+  /* カード（面）の色 */
+  --card: 150 15% 18%;
+  --card-foreground: 150 10% 92%;
 
-  /* Popover/dropdown colors */
-  --popover: 150 15% 18%;             /* Dark Sage Green */
-  --popover-foreground: 150 10% 92%;  /* Light Sage text */
+  /* ポップオーバー／ドロップダウン */
+  --popover: 150 15% 18%;
+  --popover-foreground: 150 10% 92%;
 
-  /* Primary action colors */
-  --primary: 147 30% 35%;             /* Darker Deep Green */
-  --primary-foreground: 0 0% 95%;     /* Off-white text */
+  /* 主要アクション */
+  --primary: 147 30% 35%;
+  --primary-foreground: 0 0% 95%;
 
-  /* Secondary action colors */
-  --secondary: 160 15% 25%;           /* Dark Light Green */
-  --secondary-foreground: 150 10% 90%;/* Light Sage text */
+  /* サブアクション */
+  --secondary: 160 15% 25%;
+  --secondary-foreground: 150 10% 90%;
 
-  /* Muted/subtle UI elements */
-  --muted: 150 10% 25%;               /* Dark Desaturated Sage */
-  --muted-foreground: 150 5% 65%;     /* Lighter Greyish Green */
+  /* 控えめな要素 */
+  --muted: 150 10% 25%;
+  --muted-foreground: 150 5% 65%;
 
-  /* Accent/highlight colors */
-  --accent: 39 70% 40%;               /* Darker Harvest Yellow */
-  --accent-foreground: 0 0% 95%;      /* Off-white text */
+  /* アクセント */
+  --accent: 39 70% 40%;
+  --accent-foreground: 0 0% 95%;
 
-  /* UI element borders */
-  --border: 150 15% 30%;              /* Dark Light Green border */
+  /* 枠線 */
+  --border: 150 15% 30%;
 
-  /* Form input backgrounds */
-  --input: 150 15% 20%;               /* Dark Sage */
+  /* 入力欄 */
+  --input: 150 15% 20%;
 
-  /* Focus rings */
-  --ring: 30 70% 45%;                 /* Darker Warm Orange */
+  /* フォーカスリング */
+  --ring: 30 70% 45%;
+
+  /* ダーク用 背景グラデーション（黒に沈ませず、少し彩度を残す） */
+  --bg-top: 155 18% 16%;
+  --bg-mid: 150 18% 13%;
+  --bg-bottom: 135 20% 12%;
 }
 
-/* Base styles using variables */
+/* =========================================
+   ベーススタイル
+   - 背景を「アプリ全体」に効かせる
+========================================= */
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+
+  /*  背景グラデーション（アプリ全体） */
+  background: linear-gradient(to bottom,
+      hsl(var(--bg-top)) 0%,
+      hsl(var(--bg-mid)) 45%,
+      hsl(var(--bg-bottom)) 100%);
+
+  color: hsl(var(--foreground));
 }
