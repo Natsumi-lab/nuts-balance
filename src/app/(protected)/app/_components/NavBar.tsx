@@ -77,7 +77,7 @@ export default function NavBar() {
             設定
           </Link>
 
-          {/* ログアウト：カレンダー選択日のブルー */}
+          {/* ログアウト*/}
           <button className="min-w-[96px] px-4 py-2 rounded-xl text-sm font-medium text-[#2563EB] hover:bg-blue-50 transition">
             ログアウト
           </button>
