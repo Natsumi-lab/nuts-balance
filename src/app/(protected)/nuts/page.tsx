@@ -1,8 +1,9 @@
+// src/app/(protected)/nuts/page.tsx
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
 type Nut = {
-  id: string; // uuid
+  id: string;
   name: string;
   description: string;
   image_path: string;
@@ -44,7 +45,6 @@ export default async function NutsPage() {
         </p>
       </header>
 
-      {/* 3列固定（lg以上で3列） */}
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {nuts.map((nut) => {
           const miniSrc = `/nuts/mini-${nutSlugFromName(nut.name)}.png`;
@@ -52,40 +52,36 @@ export default async function NutsPage() {
           return (
             <article
               key={nut.id}
-              className={[
-                "group rounded-2xl bg-white/80 p-5 ring-1 ring-black/5",
-                "shadow-sm transition-all duration-300 ease-out",
-                "hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10",
-                "hover:bg-white",
-              ].join(" ")}
+              className="group rounded-2xl bg-white/80 p-5 ring-1 ring-black/5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
-              <div className="flex items-start gap-4">
-                {/* 画像 */}
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl ring-1 ring-black/5 bg-[#FAFAF8]">
+              {/* ナッツ名（中央） */}
+              <h2 className="mb-4 text-center text-lg font-semibold">
+                {nut.name}
+              </h2>
+
+              {/* 画像 + 説明文 */}
+              <div className="grid grid-cols-[64px_1fr] gap-4">
+                <div className="relative h-16 w-16 self-center overflow-hidden rounded-2xl ring-1 ring-black/5 bg-[#FAFAF8]">
                   <Image
                     src={miniSrc}
                     alt={nut.name}
                     fill
-                    className="object-contain p-1 rounded-2xl transition-transform duration-300 ease-out group-hover:scale-105"
+                    className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
                     sizes="64px"
                   />
                 </div>
 
-                {/* テキスト */}
-                <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">{nut.name}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">
-                    {nutDescriptions[nut.name] ?? nut.description}
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {nutDescriptions[nut.name] ?? nut.description}
+                </p>
               </div>
 
-              {/* スコア */}
-              <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
-                <StarScore label="抗酸化力" value={nut.score_antioxidant} />
-                <StarScore label="ミネラル" value={nut.score_mineral} />
-                <StarScore label="食物繊維" value={nut.score_fiber} />
-                <StarScore label="ビタミン" value={nut.score_vitamin} />
+              {/* スコア（2×2） */}
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <ScoreCell label="抗酸化力" value={nut.score_antioxidant} />
+                <ScoreCell label="ミネラル" value={nut.score_mineral} />
+                <ScoreCell label="食物繊維" value={nut.score_fiber} />
+                <ScoreCell label="ビタミン" value={nut.score_vitamin} />
               </div>
             </article>
           );
@@ -95,9 +91,8 @@ export default async function NutsPage() {
   );
 }
 
-/**
- * ナッツ名 → 画像用スラッグ
- */
+/* ---------- utils ---------- */
+
 function nutSlugFromName(name: string) {
   const map: Record<string, string> = {
     アーモンド: "almond",
@@ -107,13 +102,9 @@ function nutSlugFromName(name: string) {
     マカダミアナッツ: "macadamia",
     ヘーゼルナッツ: "hazel",
   };
-
   return map[name] ?? "almond";
 }
 
-/**
- * 図鑑用　説明文
- */
 const nutDescriptions: Record<string, string> = {
   アーモンド:
     "香ばしくて食べやすい、定番のナッツ。\nビタミンEを含み、毎日の間食にも取り入れやすいのが魅力です。",
@@ -124,39 +115,40 @@ const nutDescriptions: Record<string, string> = {
   ピスタチオ:
     "鮮やかな色合いと香ばしさが印象的。\n食物繊維も含まれ、ゆっくり味わう間食に向いています。",
   マカダミアナッツ:
-    "クリーミーでコクのある味わいが魅力。\n少量でも満足しやすく、ちょっとしたご褒美にぴったりです。",
+    "クリーミーでコクのある味わいが魅力。\n少量でも満足しやすい、ちょっとしたご褒美にぴったりです。",
   ヘーゼルナッツ:
     "独特の香りと深いコクが特徴。\nそのままでも、砕いて使っても風味を楽しめます。",
 };
 
-function StarScore({ label, value }: { label: string; value: number }) {
+function ScoreCell({ label, value }: { label: string; value: number }) {
   const v = Math.max(0, Math.min(5, Number(value) || 0));
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <Stars value={v} max={5} />
+    <div className="flex items-center justify-between gap-2 rounded-xl bg-white/60 px-4 py-2 ring-1 ring-black/5">
+      {/* ラベルは1行固定（折り返し禁止） */}
+      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap w-[5.5rem]">
+        {label}
+      </span>
+
+      {/* ★は縮まない + 少しだけ小さくして収まりを良くする */}
+      <span className="shrink-0 text-sm">
+        <Stars value={v} max={5} />
+      </span>
     </div>
   );
 }
 
 function Stars({ value, max }: { value: number; max: number }) {
   return (
-    <span
-      className="flex items-center gap-0.5"
-      aria-label={`星 ${value}/${max}`}
-    >
-      {Array.from({ length: max }).map((_, i) => {
-        const filled = i < value;
-        return (
-          <span
-            key={i}
-            className={filled ? "text-yellow-500" : "text-black/20"}
-          >
-            ★
-          </span>
-        );
-      })}
+    <span className="flex items-center gap-0.5 leading-none">
+      {Array.from({ length: max }).map((_, i) => (
+        <span
+          key={i}
+          className={i < value ? "text-yellow-500" : "text-black/20"}
+        >
+          ★
+        </span>
+      ))}
     </span>
   );
 }
