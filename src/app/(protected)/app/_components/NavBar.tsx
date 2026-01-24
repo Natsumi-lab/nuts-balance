@@ -28,7 +28,7 @@ export default function NavBar() {
   return (
     <header className="sticky top-0 z-10 border-b border-[#F2E8C9] bg-white">
       {/* ナビ高さ */}
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* ロゴ */}
         <Link href="/app" className="flex items-center gap-3 font-bold">
           <div className="h-12 w-12 rounded-full bg-white overflow-hidden shrink-0">
@@ -68,7 +68,7 @@ export default function NavBar() {
             href="/app/nuts"
             className={`${base} ${isActive("/app/nuts") ? active : inactive}`}
           >
-            ナッツ図鑑
+            ナッツ知識
           </Link>
           <Link
             href="/app/settings"
@@ -77,7 +77,7 @@ export default function NavBar() {
             設定
           </Link>
 
-          {/* ログアウト：カレンダー選択日のブルー */}
+          {/* ログアウト*/}
           <button className="min-w-[96px] px-4 py-2 rounded-xl text-sm font-medium text-[#2563EB] hover:bg-blue-50 transition">
             ログアウト
           </button>
