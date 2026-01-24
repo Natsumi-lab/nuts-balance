@@ -1,26 +1,143 @@
 @import "tailwindcss";
 
+/* =========================================
+   ライトテーマ（HSL形式）
+========================================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 基本の文字色・背景色 */
+  --background: 150 20% 92%;
+  /* セージグリーン系のベース */
+  --foreground: 15 15% 20%;
+  /* ダークブラウン（本文） */
+
+  /* カード（面）の色 */
+  --card: 150 15% 97%;
+  /* 明るめセージ */
+  --card-foreground: 15 15% 20%;
+  /* カード内テキスト */
+
+  /* ポップオーバー／ドロップダウン */
+  --popover: 150 15% 97%;
+  --popover-foreground: 15 15% 20%;
+
+  /* 主要アクション（ボタン等） */
+  --primary: 147 25% 46%;
+  /* ディープグリーン */
+  --primary-foreground: 0 0% 100%;
+  /* 白 */
+
+  /* サブアクション */
+  --secondary: 160 15% 73%;
+  /* ライトグリーン */
+  --secondary-foreground: 15 20% 15%;
+  /* 濃いブラウン */
+
+  /* 控えめな要素（説明文・薄背景など） */
+  --muted: 150 10% 86%;
+  --muted-foreground: 160 10% 40%;
+
+  /* アクセント（強調色） */
+  --accent: 39 93% 48%;
+  /* ハーベストイエロー */
+  --accent-foreground: 15 20% 15%;
+
+  /* 枠線 */
+  --border: 150 15% 80%;
+
+  /* 入力欄の背景 */
+  --input: 150 10% 90%;
+
+  /* フォーカスリング */
+  --ring: 30 80% 56%;
+  /* ウォームオレンジ */
+
+  /* 角丸 */
+  --radius: 0.5rem;
+
+  /* =========================================
+     背景グラデーション
+     - HSLで管理しておくとダーク対応もしやすい
+  ========================================= */
+  --bg-top: 150 35% 95%;
+  /* 上：明るいミント */
+  --bg-mid: 150 35% 88%;
+  /* 中：ライトグリーン */
+  --bg-bottom: 125 55% 75%;
+  /* 下：明るめ “恐竜グリーン” 寄り */
 }
 
+/* Tailwindの theme inline（必要最小限） */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =========================================
+   ダークテーマ（.dark クラスで切替）
+========================================= */
+.dark {
+  /* 基本の文字色・背景色 */
+  --background: 150 15% 15%;
+  --foreground: 150 10% 90%;
+
+  /* カード（面）の色 */
+  --card: 150 15% 18%;
+  --card-foreground: 150 10% 92%;
+
+  /* ポップオーバー／ドロップダウン */
+  --popover: 150 15% 18%;
+  --popover-foreground: 150 10% 92%;
+
+  /* 主要アクション */
+  --primary: 147 30% 35%;
+  --primary-foreground: 0 0% 95%;
+
+  /* サブアクション */
+  --secondary: 160 15% 25%;
+  --secondary-foreground: 150 10% 90%;
+
+  /* 控えめな要素 */
+  --muted: 150 10% 25%;
+  --muted-foreground: 150 5% 65%;
+
+  /* アクセント */
+  --accent: 39 70% 40%;
+  --accent-foreground: 0 0% 95%;
+
+  /* 枠線 */
+  --border: 150 15% 30%;
+
+  /* 入力欄 */
+  --input: 150 15% 20%;
+
+  /* フォーカスリング */
+  --ring: 30 70% 45%;
+
+  /* ダーク用 背景グラデーション（黒に沈ませず、少し彩度を残す） */
+  --bg-top: 155 18% 16%;
+  --bg-mid: 150 18% 13%;
+  --bg-bottom: 135 20% 12%;
+}
+
+/* =========================================
+   ベーススタイル
+   - 背景を「アプリ全体」に効かせる
+========================================= */
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: rgb(203, 244, 238);
-  color: black;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+
+  /*  背景グラデーション（アプリ全体） */
+  background: linear-gradient(to bottom,
+      hsl(var(--bg-top)) 0%,
+      hsl(var(--bg-mid)) 45%,
+      hsl(var(--bg-bottom)) 100%);
+
+  color: hsl(var(--foreground));
 }

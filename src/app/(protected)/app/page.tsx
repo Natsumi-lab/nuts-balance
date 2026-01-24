@@ -21,9 +21,23 @@ interface PageProps {
  */
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div className="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold">エラーが発生しました</h2>
-      <p>{message}</p>
+    <div className="border rounded-2xl shadow-lg p-5 border-white/20 bg-[#FAFAF8]">
+      <div className="pb-3 border-b border-[#E6E6E4]">
+        <h3 className="text-lg font-semibold text-[#E38B3A]">
+          エラーが発生しました
+        </h3>
+      </div>
+      <div className="pt-4">
+        <p className="text-[#555]">{message}</p>
+        <div className="mt-5">
+          <button
+            className="px-5 py-2.5 rounded-xl border border-[#E6E6E4] text-sm bg-white hover:bg-[#F2F2F0] text-[#333] shadow-md transition-all"
+            onClick={() => window.location.reload()}
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -33,8 +47,13 @@ function ErrorMessage({ message }: { message: string }) {
  */
 function LoadingPlaceholder() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+    <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-md">
+      <div className="flex items-center justify-center h-64 p-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-3 border-[#9FBFAF] border-t-[#E38B3A]"></div>
+          <p className="text-sm text-[#555]">読み込み中...</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -126,36 +145,57 @@ export default async function Page({ searchParams }: PageProps) {
   try {
     // データ取得
     const { nuts, dailyLogData, streak } = await fetchDailyData(date);
+    const [y, m, d] = date.split("-").map(Number);
+    const dateLabel = `${m}月${d}日のナッツ記録`;
 
     return (
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-8 text-center">
-          ナッツバランス記録
-        </h1>
+      <main className="min-h-screen px-4 py-8">
+        <div className="container mx-auto max-w-7xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* 左カラム: 日付選択 */}
+            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] pb-3 p-4">
+                <h3 className="text-lg font-semibold text-[#333]">日付選択</h3>
+              </div>
+              <div className="p-5 space-y-6">
+                <DateSelector date={date} />
+                <div className="h-px my-4 bg-[#E6E6E4]"></div>
+                <CalendarPicker selectedDate={date} />
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* 左カラム: 日付選択 */}
-          <div className="space-y-4">
-            <DateSelector date={date} />
-            <CalendarPicker selectedDate={date} />
-          </div>
+            {/* 中央カラム: ナッツチェックリスト */}
+            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg md:col-span-1 overflow-hidden">
+              <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] pb-3 p-4">
+                <h3 className="text-lg font-semibold text-[#333]">
+                  {dateLabel}
+                </h3>
+              </div>
 
-          {/* 中央カラム: ナッツチェックリスト */}
-          <div>
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <NutCheckList
-                nuts={nuts}
-                selectedNutIds={dailyLogData.selectedNutIds}
-                date={date}
-              />
-            </Suspense>
-          </div>
+              <div className="p-5">
+                <Suspense fallback={<LoadingPlaceholder />}>
+                  <NutCheckList
+                    nuts={nuts}
+                    selectedNutIds={dailyLogData.selectedNutIds}
+                    date={date}
+                  />
+                </Suspense>
+              </div>
+            </div>
 
-          {/* 右カラム: ユーザー情報 */}
-          <div>
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <UserInfo streak={streak} />
-            </Suspense>
+            {/* 右カラム: ユーザー情報 */}
+            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] pb-3 p-4">
+                <h3 className="text-lg font-semibold text-[#333]">
+                  マイプロフィール
+                </h3>
+              </div>
+              <div className="p-0">
+                <Suspense fallback={<LoadingPlaceholder />}>
+                  <UserInfo streak={streak} />
+                </Suspense>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -163,9 +203,20 @@ export default async function Page({ searchParams }: PageProps) {
   } catch (error) {
     console.error("ページ表示エラー:", error);
     return (
-      <div className="container mx-auto px-4 py-8">
-        <ErrorMessage message="データの読み込み中にエラーが発生しました。しばらくしてから再度お試しください。" />
-      </div>
+      <main className="min-h-screen px-4 py-8">
+        <div className="container mx-auto max-w-7xl">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-[#333] mb-2">
+              ナッツバランス記録
+            </h1>
+            <div className="h-px mt-6 bg-white/40 max-w-xl mx-auto"></div>
+          </div>
+
+          <div className="max-w-lg mx-auto mt-12">
+            <ErrorMessage message="データの読み込み中にエラーが発生しました。しばらくしてから再度お試しください。" />
+          </div>
+        </div>
+      </main>
     );
   }
 }
