@@ -33,6 +33,42 @@ function normalizeNutName(name: string) {
   return name.replace(/\s+/g, "").trim();
 }
 
+type ScoreKey =
+  | "score_antioxidant"
+  | "score_mineral"
+  | "score_fiber"
+  | "score_vitamin";
+
+const TAG_DEFS: Array<{
+  key: ScoreKey;
+  label: string;
+}> = [
+  // 同点時の優先順位
+  { key: "score_antioxidant", label: "抗酸化が強い" },
+  { key: "score_vitamin", label: "ビタミン豊富" },
+  { key: "score_fiber", label: "食物繊維" },
+  { key: "score_mineral", label: "ミネラル" },
+];
+
+function getTopTag(nut: Nut): string {
+  // 最大値を探す
+  let best = TAG_DEFS[0];
+  let bestScore = nut[best.key] ?? 0;
+
+  for (const def of TAG_DEFS) {
+    const score = nut[def.key] ?? 0;
+    if (score > bestScore) {
+      best = def;
+      bestScore = score;
+    }
+  }
+
+  // スコアがすべて 0 のような異常値対策（念のため）
+  if (bestScore <= 0) return "バランス";
+
+  return best.label;
+}
+
 /**
  * ナッツチェックリストコンポーネント
  * ナッツの選択と保存機能を提供
@@ -195,11 +231,18 @@ export default function NutCheckList({
                 <h3 className="font-medium text-[#333] leading-6">
                   {nut.name}
                 </h3>
-                {nut.description ? (
-                  <p className="text-sm text-[#555] leading-relaxed mt-1.5">
-                    {nut.description}
-                  </p>
-                ) : null}
+                <div className="mt-1.5">
+                  <span
+                    className={[
+                      "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                      checked
+                        ? "border-[#9FBFAF]/40 bg-[#E6F1EC]/60 text-[#2F5D4A]"
+                        : "border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A]",
+                    ].join(" ")}
+                  >
+                    {getTopTag(nut)}
+                  </span>
+                </div>
               </div>
             </label>
           );
