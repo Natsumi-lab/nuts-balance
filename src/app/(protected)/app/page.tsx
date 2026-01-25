@@ -138,12 +138,10 @@ export default async function Page({ searchParams }: PageProps) {
     const dateLabel = `${m}月${d}日の記録`;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
         {/* 左カラム */}
         <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
-          <div className="p-5 space-y-6">
-            <DateSelector date={date} />
-            <div className="h-px my-4 bg-[#E6E6E4]"></div>
+          <div className="p-5">
             <CalendarPicker selectedDate={date} />
           </div>
         </div>

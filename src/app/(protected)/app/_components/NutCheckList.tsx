@@ -8,13 +8,11 @@ import { upsertDailyLog } from "../actions";
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型
- * - nuts.id は bigint（Supabaseからは number）想定
- * - selectedNutIds も number[] に寄せるのが理想だが、移行中なので (number|string) を許容
  */
 interface NutCheckListProps {
   nuts: Nut[];
   selectedNutIds: Array<number | string>;
-  date: string;
+  date: string; // YYYY-MM-DD
 }
 
 const MINI_NUT_IMAGE_MAP: Record<string, string> = {
@@ -39,11 +37,7 @@ type ScoreKey =
   | "score_fiber"
   | "score_vitamin";
 
-const TAG_DEFS: Array<{
-  key: ScoreKey;
-  label: string;
-}> = [
-  // 同点時の優先順位
+const TAG_DEFS: Array<{ key: ScoreKey; label: string }> = [
   { key: "score_antioxidant", label: "抗酸化が強い" },
   { key: "score_vitamin", label: "ビタミン豊富" },
   { key: "score_fiber", label: "食物繊維" },
@@ -51,7 +45,6 @@ const TAG_DEFS: Array<{
 ];
 
 function getTopTag(nut: Nut): string {
-  // 最大値を探す
   let best = TAG_DEFS[0];
   let bestScore = nut[best.key] ?? 0;
 
@@ -63,15 +56,108 @@ function getTopTag(nut: Nut): string {
     }
   }
 
-  // スコアがすべて 0 のような異常値対策（念のため）
   if (bestScore <= 0) return "バランス";
-
   return best.label;
 }
 
 /**
+ * JST の YYYY-MM-DD を返す（「今日」判定をJSTで統一）
+ */
+function getJstTodayYmd(): string {
+  const now = Date.now();
+  const jst = new Date(now + 9 * 60 * 60 * 1000);
+  return jst.toISOString().slice(0, 10);
+}
+
+/**
+ * 総合スコア(★0〜5)を算出
+ * - 選択ナッツの4項目スコア(1〜3)の平均を取り、0〜5へスケール
+ */
+function computeOverallStars(nuts: Nut[], selectedIds: number[]): number {
+  if (selectedIds.length === 0) return 0;
+
+  const byId = new Map<number, Nut>(nuts.map((n) => [n.id, n]));
+  let sum = 0;
+  let count = 0;
+
+  for (const id of selectedIds) {
+    const nut = byId.get(id);
+    if (!nut) continue;
+
+    const a = nut.score_antioxidant ?? 0;
+    const m = nut.score_mineral ?? 0;
+    const f = nut.score_fiber ?? 0;
+    const v = nut.score_vitamin ?? 0;
+
+    // 1ナッツあたり4項目
+    sum += a + m + f + v;
+    count += 4;
+  }
+
+  if (count === 0) return 0;
+
+  const avg1to3 = sum / count; // 0〜3
+  const stars0to5 = Math.round((avg1to3 / 3) * 5);
+  return Math.max(0, Math.min(5, stars0to5));
+}
+
+function Stars({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(5, value));
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span
+          key={i}
+          className={[
+            "text-base leading-none",
+            i < clamped ? "text-[#F2B705]" : "text-[#D8D8D8]",
+          ].join(" ")}
+          aria-hidden="true"
+        >
+          ★
+        </span>
+      ))}
+      <span className="ml-2 text-sm font-medium text-[#555]">
+        {clamped} / 5
+      </span>
+    </div>
+  );
+}
+
+function TodayScoreCard({ show, stars }: { show: boolean; stars: number }) {
+  return (
+    <div
+      className={[
+        "mt-4 overflow-hidden rounded-2xl border border-[#E6E6E4] bg-[#FAFAF8] shadow-sm",
+        "transition-all duration-300 ease-out",
+        show
+          ? "max-h-40 opacity-100 translate-y-0"
+          : "max-h-0 opacity-0 -translate-y-1",
+      ].join(" ")}
+      aria-hidden={!show}
+    >
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[#333]">
+              今日のスコア
+            </div>
+            <div className="mt-1 text-xs text-[#6B7F75]">
+              保存後に表示（今日のみ）
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Stars value={stars} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * ナッツチェックリストコンポーネント
- * ナッツの選択と保存機能を提供
  */
 export default function NutCheckList({
   nuts,
@@ -79,42 +165,28 @@ export default function NutCheckList({
   date,
 }: NutCheckListProps) {
   const router = useRouter();
-
-  // 保存中のUI制御（disabled / ボタン文言など）
   const [isPending, startTransition] = useTransition();
-
-  // 保存結果メッセージ表示用
   const [result, setResult] = useState<ActionResult | null>(null);
-
-  // 「保存しました」などの表示を一定時間後に消すためのタイマー参照
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /**
-   * selectedNutIds を number[] に正規化（bigint列に合わせる）
-   * - Supabaseから string/number が混在しても同じロジックで扱えるようにする
-   */
   const initialSelected = useMemo(() => {
     return selectedNutIds
       .map((v) => (typeof v === "string" ? Number(v) : v))
       .filter((v) => Number.isFinite(v)) as number[];
   }, [selectedNutIds]);
 
-  // 選択されたナッツIDを管理するローカル状態（numberで統一）
   const [selected, setSelected] = useState<number[]>(initialSelected);
 
-  // 重要：props が変わったら state を同期し直す（保存後の refresh / 日付移動でも崩れない）
   useEffect(() => {
     setSelected(initialSelected);
   }, [initialSelected, date]);
 
-  // コンポーネント破棄時にタイマーを掃除（メモリリーク防止）
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
 
-  // ナッツの選択状態を切り替える
   const toggleSelection = (nutId: number) => {
     setSelected((prev) =>
       prev.includes(nutId)
@@ -123,26 +195,39 @@ export default function NutCheckList({
     );
   };
 
-  // 選択したナッツを保存する
+  // ▼ 今日だけスコアを出す
+  const isToday = date === getJstTodayYmd();
+
+  // ▼ 保存後にふわっと出すための state（今日だけ）
+  const [showScore, setShowScore] = useState(false);
+  const [stars, setStars] = useState(0);
+
+  // 日付が今日でなくなったら必ず隠す（過去日は非表示）
+  useEffect(() => {
+    if (!isToday) setShowScore(false);
+  }, [isToday]);
+
   const saveSelection = async () => {
     setResult(null);
 
     startTransition(async () => {
       try {
-        // Server Actionを呼び出し（actions.ts 側で number|string どちらでも受けられる）
         const res = await upsertDailyLog(date, selected);
         setResult(res);
 
         if (res.success) {
-          // 既存タイマーがあればクリア（連続保存でも表示時間が正しくなる）
           if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+          hideTimerRef.current = setTimeout(() => setResult(null), 2000);
 
-          // 2秒後にメッセージを消す
-          hideTimerRef.current = setTimeout(() => {
-            setResult(null);
-          }, 2000);
+          // ✅ 保存成功時：今日ならスコアを計算して表示
+          if (isToday) {
+            const computed = computeOverallStars(nuts, selected);
+            setStars(computed);
+            setShowScore(true);
+          } else {
+            setShowScore(false);
+          }
 
-          // サーバー側データを最新にする（選択済み状態など）
           router.refresh();
         }
       } catch (error) {
@@ -157,13 +242,12 @@ export default function NutCheckList({
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm">
-      {/* リスト - 見出しを削除し親のh3をメインの見出しとして活用 */}
-      <div className="space-y-3">
+      {/* リスト */}
+      <div className="space-y-2.5">
         {nuts.map((nut) => {
           const nutId = nut.id;
           const checked = selected.includes(nutId);
 
-          // mini画像のパスを決定（DBではなく対応表で固定）
           const normalized = normalizeNutName(nut.name);
           const miniSrc = MINI_NUT_IMAGE_MAP[normalized];
 
@@ -171,7 +255,9 @@ export default function NutCheckList({
             <label
               key={String(nutId)}
               className={[
-                "flex items-start gap-4 rounded-xl px-4 py-3 cursor-pointer transition-all",
+                "flex items-start gap-3 rounded-xl cursor-pointer transition-all",
+                // ▼ ここで縦余白を詰める（py-3 → py-2）
+                "px-4 py-2",
                 checked
                   ? "bg-[#E6F1EC]/60 border border-[#9FBFAF]/30 shadow-sm"
                   : "hover:bg-[#FAFAFA] border border-transparent hover:border-[#E6E6E4]/70",
@@ -185,11 +271,10 @@ export default function NutCheckList({
                   checked={checked}
                   onChange={() => toggleSelection(nutId)}
                   disabled={isPending}
-                  className="sr-only peer" // 非表示にして独自スタイルで表現
+                  className="sr-only peer"
                   id={`nut-${nutId}`}
                 />
                 <div className="w-6 h-6 bg-white border-2 border-[#9FBFAF] rounded-md peer-checked:bg-[#E38B3A] peer-checked:border-[#E38B3A] transition-colors"></div>
-                {/* チェック時のアイコン */}
                 {checked && (
                   <div className="absolute inset-0 flex items-center justify-center text-white">
                     <svg
@@ -208,7 +293,7 @@ export default function NutCheckList({
                 )}
               </div>
 
-              {/* miniアイコン（public/nuts の固定画像） */}
+              {/* miniアイコン */}
               {miniSrc ? (
                 <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm border border-[#E6E6E4]/80">
                   <Image
@@ -220,7 +305,6 @@ export default function NutCheckList({
                   />
                 </div>
               ) : (
-                // 対応表に無い場合でもレイアウトが崩れないようプレースホルダーを出す
                 <div className="w-16 h-16 shrink-0 rounded-xl bg-[#F8F8F6] border border-[#E6E6E4]/80 flex items-center justify-center">
                   <span className="text-[10px] text-[#999]">no img</span>
                 </div>
@@ -231,7 +315,9 @@ export default function NutCheckList({
                 <h3 className="font-medium text-[#333] leading-6">
                   {nut.name}
                 </h3>
-                <div className="mt-1.5">
+
+                {/* ✅ タグ1個表示（チェック時に少し強調） */}
+                <div className="mt-1">
                   <span
                     className={[
                       "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
@@ -249,8 +335,8 @@ export default function NutCheckList({
         })}
       </div>
 
-      {/* 保存ボタン + 結果表示 */}
-      <div className="mt-8">
+      {/* 保存ボタン + 結果表示 + 今日のスコア */}
+      <div className="mt-6">
         <button
           onClick={saveSelection}
           disabled={isPending}
@@ -278,6 +364,9 @@ export default function NutCheckList({
             {result.message}
           </div>
         ) : null}
+
+        {/* ✅ ふわっと出現（保存成功後 / 今日のみ） */}
+        <TodayScoreCard show={isToday && showScore} stars={stars} />
       </div>
     </div>
   );
