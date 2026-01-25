@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Nut, ActionResult } from "@/lib/types";
-import { upsertDailyLog } from "./actions";
+import { upsertDailyLog } from "../actions";
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型

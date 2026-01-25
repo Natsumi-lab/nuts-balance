@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Nut, DailyLogData } from "@/lib/types";
-import NutCheckList from "./NutCheckList";
-import DateSelector from "./DateSelector";
-import UserInfo from "./UserInfo";
-import DateInitializer from "./DateInitializer";
-import CalendarPicker from "./CalendarPicker";
+import NutCheckList from "./_components/NutCheckList";
+import DateSelector from "./_components/DateSelector";
+import CharacterStreak from "./_components/CharacterStreak";
+import DateInitializer from "./_components/DateInitializer";
+import CalendarPicker from "./_components/CalendarPicker";
 
 /**
  * 日付パラメータの型
@@ -176,7 +176,7 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
           <div className="p-5">
             <Suspense fallback={<LoadingPlaceholder />}>
-              <UserInfo streak={streak} />
+              <CharacterStreak streak={streak} />
             </Suspense>
           </div>
         </div>
