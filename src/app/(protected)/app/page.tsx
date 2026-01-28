@@ -165,7 +165,7 @@ export default async function Page({ searchParams }: PageProps) {
             {/* 今日のスコア */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
-                <TodayScore />
+                <TodayScore show={false} stars={0} />
               </div>
             </div>
           </div>
