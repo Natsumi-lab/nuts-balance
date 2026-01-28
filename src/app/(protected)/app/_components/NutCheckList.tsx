@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Nut, ActionResult } from "@/lib/types";
 import { upsertDailyLog } from "../actions";
-import TodayScoreCard from "./TodayScoreCard";
+import TodayScore from "./TodayScore";
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型
@@ -90,7 +90,6 @@ function computeOverallStars(nuts: Nut[], selectedIds: number[]): number {
     const f = nut.score_fiber ?? 0;
     const v = nut.score_vitamin ?? 0;
 
-    // 1ナッツあたり4項目
     sum += a + m + f + v;
     count += 4;
   }
@@ -102,59 +101,38 @@ function computeOverallStars(nuts: Nut[], selectedIds: number[]): number {
   return Math.max(0, Math.min(5, stars0to5));
 }
 
-function Stars({ value }: { value: number }) {
-  const clamped = Math.max(0, Math.min(5, value));
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          className={[
-            "text-base leading-none",
-            i < clamped ? "text-[#F2B705]" : "text-[#D8D8D8]",
-          ].join(" ")}
-          aria-hidden="true"
-        >
-          ★
-        </span>
-      ))}
-      <span className="ml-2 text-sm font-medium text-[#555]">
-        {clamped} / 5
-      </span>
-    </div>
-  );
+/**
+ * YYYY-MM-DD → Date（ローカル）
+ */
+function parseYmd(date: string): Date {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
-function TodayScoreCard({ show, stars }: { show: boolean; stars: number }) {
-  return (
-    <div
-      className={[
-        "mt-4 overflow-hidden rounded-2xl border border-[#E6E6E4] bg-[#FAFAF8] shadow-sm",
-        "transition-all duration-300 ease-out",
-        show
-          ? "max-h-40 opacity-100 translate-y-0"
-          : "max-h-0 opacity-0 -translate-y-1",
-      ].join(" ")}
-      aria-hidden={!show}
-    >
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold text-[#333]">
-              今日のスコア
-            </div>
-            <div className="mt-1 text-xs text-[#6B7F75]">
-              保存後に表示（今日のみ）
-            </div>
-          </div>
-        </div>
+/**
+ * Date → YYYY-MM-DD（ローカル）
+ */
+function formatYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${mm(m)}-${dd(d)}`;
 
-        <div className="mt-3">
-          <Stars value={stars} />
-        </div>
-      </div>
-    </div>
-  );
+  function mm(v: string) {
+    return v.padStart(2, "0");
+  }
+  function dd(v: string) {
+    return v.padStart(2, "0");
+  }
+}
+
+/**
+ * 表示用：1/26（日）
+ */
+function formatJaLabel(date: string): string {
+  const d = parseYmd(date);
+  const days = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getMonth() + 1}/${d.getDate()}（${days[d.getDay()]}）`;
 }
 
 /**
@@ -197,13 +175,13 @@ export default function NutCheckList({
   };
 
   // ▼ 今日だけスコアを出す
-  const isToday = date === getJstTodayYmd();
+  const todayYmd = getJstTodayYmd();
+  const isToday = date === todayYmd;
 
   // ▼ 保存後にふわっと出すための state（今日だけ）
   const [showScore, setShowScore] = useState(false);
   const [stars, setStars] = useState(0);
 
-  // 日付が今日でなくなったら必ず隠す（過去日は非表示）
   useEffect(() => {
     if (!isToday) setShowScore(false);
   }, [isToday]);
@@ -220,7 +198,6 @@ export default function NutCheckList({
           if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
           hideTimerRef.current = setTimeout(() => setResult(null), 2000);
 
-          // ✅ 保存成功時：今日ならスコアを計算して表示
           if (isToday) {
             const computed = computeOverallStars(nuts, selected);
             setStars(computed);
@@ -241,10 +218,65 @@ export default function NutCheckList({
     });
   };
 
+  // 前日/翌日へ（URLのdateだけ変える）
+  const goPrevDay = () => {
+    const prev = parseYmd(date);
+    prev.setDate(prev.getDate() - 1);
+    router.push(`/app?date=${formatYmd(prev)}`);
+  };
+
+  const goNextDay = () => {
+    const next = parseYmd(date);
+    next.setDate(next.getDate() + 1);
+    router.push(`/app?date=${formatYmd(next)}`);
+  };
+
+  // ✅ 未来日は無効（JST基準）
+  const isNextDisabled = date >= todayYmd;
+
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm">
-      {/* リスト */}
-      <div className="space-y-2.5">
+      {/* ✅ ヘッダー：中央に日付ラベル + 左右に前日/翌日 */}
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={goPrevDay}
+          disabled={isPending}
+          className={[
+            "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+            "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
+            "hover:bg-white hover:shadow-md transition-all",
+            isPending ? "opacity-60 cursor-not-allowed" : "",
+          ].join(" ")}
+          aria-label="前日へ"
+        >
+          ← 前日
+        </button>
+
+        <div className="text-center">
+          <div className="text-xl font-bold text-[#333] leading-tight">
+            {formatJaLabel(date)}の記録
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={goNextDay}
+          disabled={isPending || isNextDisabled}
+          className={[
+            "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+            "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
+            "hover:bg-white hover:shadow-md transition-all",
+            "disabled:opacity-60 disabled:cursor-not-allowed",
+          ].join(" ")}
+          aria-label="翌日へ"
+        >
+          翌日 →
+        </button>
+      </div>
+
+      {/*  PC3列グリッド（縦2×横3）、スマホは2列 */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {nuts.map((nut) => {
           const nutId = nut.id;
           const checked = selected.includes(nutId);
@@ -256,79 +288,80 @@ export default function NutCheckList({
             <label
               key={String(nutId)}
               className={[
-                "flex items-start gap-3 rounded-xl cursor-pointer transition-all",
-                // ▼ ここで縦余白を詰める（py-3 → py-2）
-                "px-4 py-2",
+                "rounded-2xl cursor-pointer transition-all border",
+                "p-3",
                 checked
-                  ? "bg-[#E6F1EC]/60 border border-[#9FBFAF]/30 shadow-sm"
-                  : "hover:bg-[#FAFAFA] border border-transparent hover:border-[#E6E6E4]/70",
+                  ? "bg-[#E6F1EC]/60 border-[#9FBFAF]/30 shadow-sm"
+                  : "bg-white hover:bg-[#FAFAFA] border-[#E6E6E4]/70",
                 isPending ? "opacity-70 cursor-not-allowed" : "",
               ].join(" ")}
             >
-              {/* チェックボックス */}
-              <div className="mt-1.5 relative">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleSelection(nutId)}
-                  disabled={isPending}
-                  className="sr-only peer"
-                  id={`nut-${nutId}`}
-                />
-                <div className="w-6 h-6 bg-white border-2 border-[#9FBFAF] rounded-md peer-checked:bg-[#E38B3A] peer-checked:border-[#E38B3A] transition-colors"></div>
-                {checked && (
-                  <div className="absolute inset-0 flex items-center justify-center text-white">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+              <div className="flex items-start gap-3">
+                {/* チェックボックス */}
+                <div className="mt-1 relative">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleSelection(nutId)}
+                    disabled={isPending}
+                    className="sr-only peer"
+                    id={`nut-${nutId}`}
+                  />
+                  <div className="w-6 h-6 bg-white border-2 border-[#9FBFAF] rounded-md peer-checked:bg-[#E38B3A] peer-checked:border-[#E38B3A] transition-colors" />
+                  {checked && (
+                    <div className="absolute inset-0 flex items-center justify-center text-white">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+
+                {/* miniアイコン */}
+                {miniSrc ? (
+                  <div className="relative w-14 h-14 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm border border-[#E6E6E4]/80">
+                    <Image
+                      src={miniSrc}
+                      alt={nut.name}
+                      fill
+                      sizes="56px"
+                      className="object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-[#F8F8F6] border border-[#E6E6E4]/80 flex items-center justify-center">
+                    <span className="text-[10px] text-[#999]">no img</span>
                   </div>
                 )}
-              </div>
 
-              {/* miniアイコン */}
-              {miniSrc ? (
-                <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm border border-[#E6E6E4]/80">
-                  <Image
-                    src={miniSrc}
-                    alt={nut.name}
-                    fill
-                    sizes="64px"
-                    className="object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="w-16 h-16 shrink-0 rounded-xl bg-[#F8F8F6] border border-[#E6E6E4]/80 flex items-center justify-center">
-                  <span className="text-[10px] text-[#999]">no img</span>
-                </div>
-              )}
+                {/* テキスト */}
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-[#333] leading-5 text-sm">
+                    {nut.name}
+                  </h3>
 
-              {/* テキスト */}
-              <div className="min-w-0">
-                <h3 className="font-medium text-[#333] leading-6">
-                  {nut.name}
-                </h3>
-
-                {/* ✅ タグ1個表示（チェック時に少し強調） */}
-                <div className="mt-1">
-                  <span
-                    className={[
-                      "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-                      checked
-                        ? "border-[#9FBFAF]/40 bg-[#E6F1EC]/60 text-[#2F5D4A]"
-                        : "border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A]",
-                    ].join(" ")}
-                  >
-                    {getTopTag(nut)}
-                  </span>
+                  {/* タグ1個表示 */}
+                  <div className="mt-1">
+                    <span
+                      className={[
+                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                        checked
+                          ? "border-[#9FBFAF]/40 bg-[#E6F1EC]/60 text-[#2F5D4A]"
+                          : "border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A]",
+                      ].join(" ")}
+                    >
+                      {getTopTag(nut)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </label>
@@ -367,7 +400,7 @@ export default function NutCheckList({
         ) : null}
 
         {/* ✅ ふわっと出現（保存成功後 / 今日のみ） */}
-        <TodayScoreCard show={isToday && showScore} stars={stars} />
+        <TodayScore show={isToday && showScore} stars={stars} />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-type TodayScoreCardProps = {
+type TodayScoreProps = {
   /**
    * 表示制御：保存成功後に true を渡す想定
    * false のときは「非表示（高さ0）」でスペースを取らない
@@ -43,11 +43,11 @@ function StarsRow({ value }: { value: number | null }) {
   );
 }
 
-export default function TodayScoreCard({
+export default function TodayScore({
   isVisible,
   stars = null,
   title = "今日のスコア",
-}: TodayScoreCardProps) {
+}: TodayScoreProps) {
   return (
     <section
       className={[
