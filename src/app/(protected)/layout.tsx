@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import NavBar from "./app/_components/NavBar";
+import NavBar from "./_components/NavBar";
 
 export default function ProtectedLayout({ children }: { children: ReactNode }) {
   return (
