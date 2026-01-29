@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Nut, DailyLogData } from "@/lib/types";
-import NutCheckList from "./NutCheckList";
-import DateSelector from "./DateSelector";
-import UserInfo from "./UserInfo";
-import DateInitializer from "./DateInitializer";
-import CalendarPicker from "./CalendarPicker";
+import NutCheckList from "./_components/NutCheckList";
+import CharacterStreak from "./_components/CharacterStreak";
+import DateInitializer from "./_components/DateInitializer";
+import CalendarPicker from "./_components/CalendarPicker";
+import TodayScore from "./_components/TodayScore";
 
 /**
  * 日付パラメータの型
@@ -134,52 +134,51 @@ export default async function Page({ searchParams }: PageProps) {
 
   try {
     const { nuts, dailyLogData, streak } = await fetchDailyData(date);
-    const [, m, d] = date.split("-").map(Number);
-    const dateLabel = `${m}月${d}日のナッツ記録`;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* 左カラム */}
-        <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
-          <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] p-4">
-            <h3 className="text-lg font-semibold text-[#333]">日付選択</h3>
+      // 外側：モバイルは縦積み、lg以上で「左（広）/右（狭）」の2カラム
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
+        {/* 左エリア（主役） */}
+        <section className="grid grid-cols-1 gap-5 lg:gap-6">
+          {/* 上段：チェック（チェック＆保存） */}
+          <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+            <div className="p-5">
+              <Suspense fallback={<LoadingPlaceholder />}>
+                <NutCheckList
+                  nuts={nuts}
+                  selectedNutIds={dailyLogData.selectedNutIds}
+                  date={date}
+                />
+              </Suspense>
+            </div>
           </div>
-          <div className="p-5 space-y-6">
-            <DateSelector date={date} />
-            <div className="h-px my-4 bg-[#E6E6E4]"></div>
-            <CalendarPicker selectedDate={date} />
-          </div>
-        </div>
 
-        {/* 中央カラム */}
-        <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
-          <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] p-4">
-            <h3 className="text-lg font-semibold text-[#333]">{dateLabel}</h3>
+          {/* 下段：mdは縦、lg以上で「カレンダー｜今日のスコア」 */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+            {/* カレンダー */}
+            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+              <div className="p-5">
+                <CalendarPicker selectedDate={date} />
+              </div>
+            </div>
+
+            {/* 今日のスコア */}
+            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+              <div className="p-5">
+                <TodayScore show={false} stars={0} />
+              </div>
+            </div>
           </div>
+        </section>
+
+        {/* 右エリア：キャラ＋ストリーク */}
+        <aside className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
           <div className="p-5">
             <Suspense fallback={<LoadingPlaceholder />}>
-              <NutCheckList
-                nuts={nuts}
-                selectedNutIds={dailyLogData.selectedNutIds}
-                date={date}
-              />
+              <CharacterStreak streak={streak} />
             </Suspense>
           </div>
-        </div>
-
-        {/* 右カラム */}
-        <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
-          <div className="bg-[#F8F8F6] border-b border-[#E6E6E4] p-4">
-            <h3 className="text-lg font-semibold text-[#333]">
-              マイプロフィール
-            </h3>
-          </div>
-          <div className="p-5">
-            <Suspense fallback={<LoadingPlaceholder />}>
-              <UserInfo streak={streak} />
-            </Suspense>
-          </div>
-        </div>
+        </aside>
       </div>
     );
   } catch {

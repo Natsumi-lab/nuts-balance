@@ -3,9 +3,9 @@
 import Image from "next/image";
 
 /**
- * UserInfoコンポーネントのプロパティ型
+ * CharacterStreakコンポーネントのプロパティ型
  */
-interface UserInfoProps {
+interface CharacterStreakProps {
   streak: number;
 }
 
@@ -13,7 +13,7 @@ interface UserInfoProps {
  * ユーザー情報表示コンポーネント
  * ストリーク数とキャラクタープレースホルダーを表示
  */
-export default function UserInfo({ streak }: UserInfoProps) {
+export default function CharacterStreak({ streak }: CharacterStreakProps) {
   return (
     <div className="px-5 py-6">
       {/* キャラクターエリア */}
