@@ -1,6 +1,6 @@
 "use client";
 
-export type TodayScoreProps = {
+type Props = {
   show: boolean;
   stars: number; // 0〜5
 };
@@ -28,7 +28,7 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-export default function TodayScore({ show, stars }: TodayScoreProps) {
+export default function TodayScore({ show, stars }: Props) {
   return (
     <div
       className={[
