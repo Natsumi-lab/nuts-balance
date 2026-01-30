@@ -5,7 +5,7 @@ import NutCheckList from "./_components/NutCheckList";
 import CharacterStreak from "./_components/CharacterStreak";
 import DateInitializer from "./_components/DateInitializer";
 import CalendarPicker from "./_components/CalendarPicker";
-import TodayScore from "./_components/TodayScore";
+import TodayScore from "./_components/TodayScore"; // 使ってなければ消してOK（下段で使うなら残す）
 
 /**
  * 日付パラメータの型
@@ -135,8 +135,10 @@ export default async function Page({ searchParams }: PageProps) {
   try {
     const { nuts, dailyLogData, streak } = await fetchDailyData(date);
 
+    // ✅ 「保存済み」判定はサーバー事実（dailyLogの存在）で決める
+    const isSaved = dailyLogData.dailyLog !== null;
+
     return (
-      // 外側：モバイルは縦積み、lg以上で「左（広）/右（狭）」の2カラム
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
         {/* 左エリア（主役） */}
         <section className="grid grid-cols-1 gap-5 lg:gap-6">
@@ -148,6 +150,7 @@ export default async function Page({ searchParams }: PageProps) {
                   nuts={nuts}
                   selectedNutIds={dailyLogData.selectedNutIds}
                   date={date}
+                  isSaved={isSaved}
                 />
               </Suspense>
             </div>
@@ -162,7 +165,9 @@ export default async function Page({ searchParams }: PageProps) {
               </div>
             </div>
 
-            {/* 今日のスコア */}
+            {/* 今日のスコア（スペース確保用。実表示はNutCheckList内でもOK）
+               ※ ここは将来「レポート」へ寄せるなら削除しても良い
+            */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
                 <TodayScore show={false} stars={0} />
