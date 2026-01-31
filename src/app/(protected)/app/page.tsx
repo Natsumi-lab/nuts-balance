@@ -5,7 +5,12 @@ import NutCheckList from "./_components/NutCheckList";
 import CharacterStreak from "./_components/CharacterStreak";
 import DateInitializer from "./_components/DateInitializer";
 import CalendarPicker from "./_components/CalendarPicker";
-import TodayScore from "./_components/TodayScore"; // 使ってなければ消してOK（下段で使うなら残す）
+import TodayScore from "./_components/TodayScore";
+import { computeDailyScores } from "@/lib/domain/score";
+import {
+  generateDailyComment,
+  SCORE_EMPTY_MESSAGE,
+} from "@/lib/domain/comment";
 
 /**
  * 日付パラメータの型
@@ -122,6 +127,16 @@ async function fetchDailyData(date: string): Promise<{
 }
 
 /**
+ * YYYY-MM-DD → 1/28（水）
+ */
+function formatJaLabel(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const days = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${dt.getMonth() + 1}/${dt.getDate()}（${days[dt.getDay()]}）`;
+}
+
+/**
  * メインページコンポーネント
  */
 export default async function Page({ searchParams }: PageProps) {
@@ -135,10 +150,25 @@ export default async function Page({ searchParams }: PageProps) {
   try {
     const { nuts, dailyLogData, streak } = await fetchDailyData(date);
 
-    // ✅ 「保存済み」判定はサーバー事実（dailyLogの存在）で決める
-    const isSaved = dailyLogData.dailyLog !== null;
+    // 保存済み判定（ログ行がある ＆ 選択が1つ以上）
+    const savedSelectedIds = dailyLogData.selectedNutIds
+      .map((v) => Number(v))
+      .filter((v) => Number.isFinite(v));
+
+    const hasSelection = savedSelectedIds.length > 0;
+    const isSaved = dailyLogData.dailyLog !== null && hasSelection;
+
+    // isSaved=true の時だけ計算＆コメント生成
+    const scoreResult = computeDailyScores(nuts, savedSelectedIds);
+
+    const comment = isSaved
+      ? generateDailyComment({ date, streak, scoreResult })
+      : undefined;
+
+    const dateLabel = formatJaLabel(date);
 
     return (
+      // 外側：モバイルは縦積み、lg以上で「左（広）/右（狭）」の2カラム
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
         {/* 左エリア（主役） */}
         <section className="grid grid-cols-1 gap-5 lg:gap-6">
@@ -150,13 +180,12 @@ export default async function Page({ searchParams }: PageProps) {
                   nuts={nuts}
                   selectedNutIds={dailyLogData.selectedNutIds}
                   date={date}
-                  isSaved={isSaved}
                 />
               </Suspense>
             </div>
           </div>
 
-          {/* 下段：mdは縦、lg以上で「カレンダー｜今日のスコア」 */}
+          {/* 下段：lg以上で「カレンダー｜スコア」 */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
             {/* カレンダー */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
@@ -165,12 +194,16 @@ export default async function Page({ searchParams }: PageProps) {
               </div>
             </div>
 
-            {/* 今日のスコア（スペース確保用。実表示はNutCheckList内でもOK）
-               ※ ここは将来「レポート」へ寄せるなら削除しても良い
-            */}
+            {/* スコア（保存済みなら表示、未保存なら非表示） */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
-                <TodayScore show={false} stars={0} />
+                <TodayScore
+                  isSaved={isSaved}
+                  scores={isSaved ? scoreResult.scores : undefined}
+                  comment={isSaved ? comment : undefined}
+                  emptyMessage={SCORE_EMPTY_MESSAGE}
+                  dateLabel={dateLabel}
+                />
               </div>
             </div>
           </div>
