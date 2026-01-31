@@ -1,4 +1,4 @@
-import type { DailyScores, ScoreKey, ScoreResult } from "./score";
+import type { ScoreKey, ScoreResult } from "./score";
 
 type CommentCategory = "balance" | "strength";
 
@@ -54,7 +54,7 @@ const STRENGTH_TEMPLATES = [
 
 export type CommentInput = {
   date: string;           // YYYY-MM-DD
-  streak: number;         // 今は未使用でもOK
+  streak: number;         
   scoreResult: ScoreResult;
 };
 
@@ -77,6 +77,6 @@ export function generateDailyComment({ date, scoreResult }: CommentInput): strin
 }
 
 /**
- * isSaved=false の時に出すメッセージ（UIで固定でもOK）
+ * isSaved=false の時に出すメッセージ
  */
 export const SCORE_EMPTY_MESSAGE = "保存するとスコアが表示されます";

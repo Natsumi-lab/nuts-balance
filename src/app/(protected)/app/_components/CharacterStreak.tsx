@@ -1,32 +1,75 @@
 "use client";
 
 import Image from "next/image";
+import { getGrowthStage, type GrowthStage } from "@/lib/domain/growth";
 
 /**
  * CharacterStreakコンポーネントのプロパティ型
  */
 interface CharacterStreakProps {
-  streak: number;
+  streak: number; // 連続日数（ストリーク）
+  recordDays: number; // 累計記録日数
 }
 
 /**
- * ユーザー情報表示コンポーネント
- * ストリーク数とキャラクタープレースホルダーを表示
+ * 成長メーター用アイコン定義
  */
-export default function CharacterStreak({ streak }: CharacterStreakProps) {
+const GROWTH_ICONS = ["🌱", "🌿", "🌳", "🌳✨", "🌳🌰"];
+
+/**
+ * キャラクター＆ストリーク表示コンポーネント
+ */
+export default function CharacterStreak({
+  streak,
+  recordDays,
+}: CharacterStreakProps) {
+  // --- 成長ステージ判定 ---
+  const stage: GrowthStage = getGrowthStage(recordDays);
+
+  // --- キャラID（奇数 / 偶数月） ---
+  const month = new Date().getMonth() + 1;
+  const characterId = month % 2 === 0 ? "wl" : "al";
+
+  // --- キャラ画像パス ---
+  const imageSrc = `/nuts/${characterId}-stage${stage}.png`;
+
   return (
     <div className="px-5 py-6">
       {/* キャラクターエリア */}
       <div className="flex flex-col items-center">
-        <div className="relative w-full max-w-sm mx-auto aspect-[3/4] bg-[#FAFAF8] rounded-2xl p-4 shadow-sm border border-[#E6E6E4]/80 mb-3">
-          <Image
-            src="/nuts/5almond-flower.png"
-            alt="ナッツキャラクター"
-            fill
-            sizes="(max-width: 768px) 90vw, 320px"
-            className="object-contain drop-shadow-md"
-            priority
-          />
+        <div
+          className="relative w-full max-w-sm mx-auto aspect-[3/4] 
+          bg-[#FAFAF8] rounded-2xl shadow-sm border border-[#E6E6E4]/80 mb-3"
+        >
+          <div className="relative w-full h-full rounded-xl overflow-hidden">
+            <Image
+              src={imageSrc}
+              alt="ナッツキャラクター"
+              fill
+              sizes="(max-width: 768px) 90vw, 320px"
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
+
+        {/* 成長メーター */}
+        <div className="mt-2 flex items-center gap-1 text-xl">
+          {GROWTH_ICONS.map((icon, index) => {
+            const filled = index < stage;
+            return (
+              <span
+                key={index}
+                className={filled ? "opacity-100" : "opacity-30"}
+              >
+                {icon}
+              </span>
+            );
+          })}
+        </div>
+
+        <div className="mt-1 text-xs text-[#666]">
+          記録 {recordDays} 日で成長中
         </div>
       </div>
 
