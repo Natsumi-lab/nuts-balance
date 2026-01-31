@@ -71,6 +71,7 @@ async function fetchDailyData(date: string): Promise<{
   dailyLogData: DailyLogData;
   streak: number;
   recordDays: number;
+  recordedDates: string[];
 }> {
   const supabase = await createClient();
 
@@ -117,13 +118,22 @@ async function fetchDailyData(date: string): Promise<{
     throw new Error("ストリーク情報の取得に失敗しました");
   }
 
-  //  累計の記録日数（daily_logsの件数）
+  // 累計の記録日数
   const { count: recordDaysCount, error: recordDaysError } = await supabase
     .from("daily_logs")
     .select("id", { count: "exact", head: true });
 
   if (recordDaysError) {
     throw new Error("記録日数の取得に失敗しました");
+  }
+
+  // ✅ 記録がある日付一覧（カレンダー用）
+  const { data: recordedLogs, error: recordedLogsError } = await supabase
+    .from("daily_logs")
+    .select("log_date");
+
+  if (recordedLogsError) {
+    throw new Error("記録日付一覧の取得に失敗しました");
   }
 
   return {
@@ -134,6 +144,7 @@ async function fetchDailyData(date: string): Promise<{
     },
     streak: streakData?.current_streak || 0,
     recordDays: recordDaysCount ?? 0,
+    recordedDates: recordedLogs.map((log) => log.log_date),
   };
 }
 
@@ -159,10 +170,9 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   try {
-    const { nuts, dailyLogData, streak, recordDays } =
+    const { nuts, dailyLogData, streak, recordDays, recordedDates } =
       await fetchDailyData(date);
 
-    // 保存済み判定（ログ行がある ＆ 選択が1つ以上）
     const savedSelectedIds = dailyLogData.selectedNutIds
       .map((v) => Number(v))
       .filter((v) => Number.isFinite(v));
@@ -170,7 +180,6 @@ export default async function Page({ searchParams }: PageProps) {
     const hasSelection = savedSelectedIds.length > 0;
     const isSaved = dailyLogData.dailyLog !== null && hasSelection;
 
-    // isSaved=true の時だけ計算＆コメント生成
     const scoreResult = computeDailyScores(nuts, savedSelectedIds);
 
     const comment = isSaved
@@ -180,11 +189,9 @@ export default async function Page({ searchParams }: PageProps) {
     const dateLabel = formatJaLabel(date);
 
     return (
-      // 外側：モバイルは縦積み、lg以上で「左（広）/右（狭）」の2カラム
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
-        {/* 左エリア（主役） */}
+        {/* 左エリア */}
         <section className="grid grid-cols-1 gap-5 lg:gap-6">
-          {/* 上段：チェック（チェック＆保存） */}
           <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
             <div className="p-5">
               <Suspense fallback={<LoadingPlaceholder />}>
@@ -197,16 +204,18 @@ export default async function Page({ searchParams }: PageProps) {
             </div>
           </div>
 
-          {/* 下段：lg以上で「カレンダー｜スコア」 */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
             {/* カレンダー */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
-                <CalendarPicker selectedDate={date} />
+                <CalendarPicker
+                  selectedDate={date}
+                  recordedDates={recordedDates}
+                />
               </div>
             </div>
 
-            {/* スコア（保存済みなら表示、未保存なら非表示） */}
+            {/* スコア */}
             <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
                 <TodayScore
@@ -221,7 +230,7 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
         </section>
 
-        {/* 右エリア：キャラ＋ストリーク */}
+        {/* 右エリア */}
         <aside className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
           <div className="p-5">
             <Suspense fallback={<LoadingPlaceholder />}>
