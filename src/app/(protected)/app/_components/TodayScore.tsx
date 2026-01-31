@@ -1,60 +1,134 @@
 "use client";
 
-type Props = {
-  show: boolean;
-  stars: number; // 0〜5
+import { useEffect, useMemo, useState } from "react";
+import type { DailyScores, ScoreKey } from "@/lib/domain/score";
+
+export type TodayScoreProps = {
+  isSaved: boolean;
+  dateLabel?: string; // 例：M/D（W）
+  scores?: DailyScores; // 保存済みのみ必須
+  comment?: string; // 保存済みのみ必須
+  emptyMessage?: string;
 };
 
-function Stars({ value }: { value: number }) {
+const LABELS: Record<ScoreKey, string> = {
+  antioxidant: "抗酸化",
+  mineral: "ミネラル",
+  fiber: "食物繊維",
+  vitamin: "ビタミン",
+  variety: "バラエティ",
+};
+
+function StarsRow({ label, value }: { label: string; value: number }) {
   const clamped = Math.max(0, Math.min(5, value));
+
   return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          className={[
-            "text-base leading-none",
-            i < clamped ? "text-[#F2B705]" : "text-[#D8D8D8]",
-          ].join(" ")}
-          aria-hidden="true"
-        >
-          ★
+    <div className="flex items-center gap-2 text-left">
+      <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-[#333]">
+        {label}
+      </div>
+
+      <div className="flex items-center gap-0.5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <span
+            key={i}
+            className={[
+              "text-xl leading-none",
+              i < clamped ? "text-[#F2B705]" : "text-[#D8D8D8]",
+            ].join(" ")}
+            aria-hidden="true"
+          >
+            ★
+          </span>
+        ))}
+        <span className="ml-1 w-[36px] text-right text-xs font-semibold text-[#555]">
+          {clamped}/5
         </span>
-      ))}
-      <span className="ml-2 text-sm font-medium text-[#555]">
-        {clamped} / 5
-      </span>
+      </div>
     </div>
   );
 }
 
-export default function TodayScore({ show, stars }: Props) {
+export default function TodayScore({
+  isSaved,
+  dateLabel,
+  scores,
+  comment,
+  emptyMessage = "保存するとスコアが表示されます",
+}: TodayScoreProps) {
+  // 保存済みになったタイミングでアニメ演出
+  const [animateIn, setAnimateIn] = useState(false);
+
+  useEffect(() => {
+    if (!isSaved) {
+      setAnimateIn(false);
+      return;
+    }
+    setAnimateIn(true);
+    const t = setTimeout(() => setAnimateIn(false), 450);
+    return () => clearTimeout(t);
+  }, [isSaved, dateLabel]);
+
+  const rows = useMemo(() => {
+    const order: ScoreKey[] = [
+      "antioxidant",
+      "mineral",
+      "fiber",
+      "vitamin",
+      "variety",
+    ];
+    return order.map((k) => ({
+      key: k,
+      label: LABELS[k],
+      value: scores?.[k] ?? 0,
+    }));
+  }, [scores]);
+
   return (
     <div
       className={[
-        "mt-4 overflow-hidden rounded-2xl border border-[#E6E6E4] bg-[#FAFAF8] shadow-sm",
+        "rounded-2xl border border-[#E6E6E4] bg-white shadow-sm",
         "transition-all duration-300 ease-out",
-        show
-          ? "max-h-40 opacity-100 translate-y-0"
-          : "max-h-0 opacity-0 -translate-y-1",
+        isSaved
+          ? animateIn
+            ? "opacity-0 translate-y-2"
+            : "opacity-100 translate-y-0"
+          : "opacity-100 translate-y-0",
       ].join(" ")}
-      aria-hidden={!show}
     >
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold text-[#333]">
-              今日のスコア
-            </div>
-            <div className="mt-1 text-xs text-[#6B7F75]">
-              保存後に表示（今日のみ）
-            </div>
+      <div className="p-5">
+        {/* 見出し「M/D（W）のスコア」 */}
+        <div className="text-center">
+          <div className="text-xl font-semibold text-[#2F3A34]">
+            {dateLabel ? `${dateLabel} のスコア` : "今日のスコア"}
           </div>
         </div>
 
-        <div className="mt-3">
-          <Stars value={stars} />
-        </div>
+        {!isSaved ? (
+          <div className="mt-4 rounded-xl bg-[#F6F7F6] px-3 py-3 text-sm text-[#2F3A34] text-center">
+            {emptyMessage}
+          </div>
+        ) : (
+          <>
+            <div className="mt-5 text-center">
+              <div className="inline-block min-w-[240px] px-4 space-y-2">
+                {rows.map((r) => (
+                  <StarsRow key={r.key} label={r.label} value={r.value} />
+                ))}
+              </div>
+            </div>
+
+            {/* コメント */}
+            {comment ? (
+              <div className="mt-4 rounded-xl bg-[#F6F7F6] px-3 py-2 text-sm text-[#2F3A34]">
+                <div className="text-xs font-semibold text-[#6B7F75]">
+                  コメント
+                </div>
+                <div className="mt-1">{comment}</div>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );

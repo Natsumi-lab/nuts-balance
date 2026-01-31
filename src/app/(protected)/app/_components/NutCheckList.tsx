@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Nut, ActionResult } from "@/lib/types";
 import { upsertDailyLog } from "../actions";
-import TodayScore from "./TodayScore";
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型
@@ -62,43 +61,12 @@ function getTopTag(nut: Nut): string {
 }
 
 /**
- * JST の YYYY-MM-DD を返す（「今日」判定をJSTで統一）
+ * JST の YYYY-MM-DD を返す（未来日判定をJSTで統一）
  */
 function getJstTodayYmd(): string {
   const now = Date.now();
   const jst = new Date(now + 9 * 60 * 60 * 1000);
   return jst.toISOString().slice(0, 10);
-}
-
-/**
- * 総合スコア(★0〜5)を算出
- * - 選択ナッツの4項目スコア(1〜3)の平均を取り、0〜5へスケール
- */
-function computeOverallStars(nuts: Nut[], selectedIds: number[]): number {
-  if (selectedIds.length === 0) return 0;
-
-  const byId = new Map<number, Nut>(nuts.map((n) => [n.id, n]));
-  let sum = 0;
-  let count = 0;
-
-  for (const id of selectedIds) {
-    const nut = byId.get(id);
-    if (!nut) continue;
-
-    const a = nut.score_antioxidant ?? 0;
-    const m = nut.score_mineral ?? 0;
-    const f = nut.score_fiber ?? 0;
-    const v = nut.score_vitamin ?? 0;
-
-    sum += a + m + f + v;
-    count += 4;
-  }
-
-  if (count === 0) return 0;
-
-  const avg1to3 = sum / count; // 0〜3
-  const stars0to5 = Math.round((avg1to3 / 3) * 5);
-  return Math.max(0, Math.min(5, stars0to5));
 }
 
 /**
@@ -116,18 +84,11 @@ function formatYmd(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${mm(m)}-${dd(d)}`;
-
-  function mm(v: string) {
-    return v.padStart(2, "0");
-  }
-  function dd(v: string) {
-    return v.padStart(2, "0");
-  }
+  return `${y}-${m}-${d}`;
 }
 
 /**
- * 表示用：1/26（日）
+ * 表示用：M/D（W）
  */
 function formatJaLabel(date: string): string {
   const d = parseYmd(date);
@@ -156,10 +117,12 @@ export default function NutCheckList({
 
   const [selected, setSelected] = useState<number[]>(initialSelected);
 
+  // propsが変わったらstateを同期（日付移動・refreshでも崩れない）
   useEffect(() => {
     setSelected(initialSelected);
   }, [initialSelected, date]);
 
+  // タイマー掃除
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -174,18 +137,6 @@ export default function NutCheckList({
     );
   };
 
-  // ▼ 今日だけスコアを出す
-  const todayYmd = getJstTodayYmd();
-  const isToday = date === todayYmd;
-
-  // ▼ 保存後にふわっと出すための state（今日だけ）
-  const [showScore, setShowScore] = useState(false);
-  const [stars, setStars] = useState(0);
-
-  useEffect(() => {
-    if (!isToday) setShowScore(false);
-  }, [isToday]);
-
   const saveSelection = async () => {
     setResult(null);
 
@@ -198,14 +149,7 @@ export default function NutCheckList({
           if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
           hideTimerRef.current = setTimeout(() => setResult(null), 2000);
 
-          if (isToday) {
-            const computed = computeOverallStars(nuts, selected);
-            setStars(computed);
-            setShowScore(true);
-          } else {
-            setShowScore(false);
-          }
-
+          // 重要：表示はサーバー事実に寄せるため refresh
           router.refresh();
         }
       } catch (error) {
@@ -231,52 +175,59 @@ export default function NutCheckList({
     router.push(`/app?date=${formatYmd(next)}`);
   };
 
-  // ✅ 未来日は無効（JST基準）
+  // 未来日の翌日を無効化（JST基準）
+  const todayYmd = getJstTodayYmd();
   const isNextDisabled = date >= todayYmd;
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm">
-      {/* ✅ ヘッダー：中央に日付ラベル + 左右に前日/翌日 */}
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={goPrevDay}
-          disabled={isPending}
-          className={[
-            "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-            "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
-            "hover:bg-white hover:shadow-md transition-all",
-            isPending ? "opacity-60 cursor-not-allowed" : "",
-          ].join(" ")}
-          aria-label="前日へ"
-        >
-          ← 前日
-        </button>
+      {/* ✅ ヘッダー：中央に日付 + 左右に前日/翌日 */}
+      <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className="flex justify-start">
+          <button
+            type="button"
+            onClick={goPrevDay}
+            disabled={isPending}
+            className={[
+              "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+              "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
+              "hover:bg-white hover:shadow-md transition-all",
+              isPending ? "opacity-60 cursor-not-allowed" : "",
+            ].join(" ")}
+            aria-label="前日へ"
+          >
+            ← 前日
+          </button>
+        </div>
 
         <div className="text-center">
-          <div className="text-xl font-bold text-[#333] leading-tight">
+          <div className="text-xl font-bold text-[#2F3A34] leading-tight">
             {formatJaLabel(date)}の記録
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={goNextDay}
-          disabled={isPending || isNextDisabled}
-          className={[
-            "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-            "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
-            "hover:bg-white hover:shadow-md transition-all",
-            "disabled:opacity-60 disabled:cursor-not-allowed",
-          ].join(" ")}
-          aria-label="翌日へ"
-        >
-          翌日 →
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={goNextDay}
+            disabled={isPending || isNextDisabled}
+            className={[
+              "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+              "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
+              "hover:bg-white hover:shadow-md transition-all",
+              isPending || isNextDisabled
+                ? "opacity-60 cursor-not-allowed"
+                : "",
+            ].join(" ")}
+            aria-label="翌日へ"
+          >
+            翌日 →
+          </button>
+        </div>
       </div>
 
-      {/*  PC3列グリッド（縦2×横3）、スマホは2列 */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* ✅ ナッツ：縦2×横3（= 横3列） */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {nuts.map((nut) => {
           const nutId = nut.id;
           const checked = selected.includes(nutId);
@@ -369,7 +320,7 @@ export default function NutCheckList({
         })}
       </div>
 
-      {/* 保存ボタン + 結果表示 + 今日のスコア */}
+      {/* 保存ボタン + 結果表示 */}
       <div className="mt-6">
         <button
           onClick={saveSelection}
@@ -398,9 +349,6 @@ export default function NutCheckList({
             {result.message}
           </div>
         ) : null}
-
-        {/* ✅ ふわっと出現（保存成功後 / 今日のみ） */}
-        <TodayScore show={isToday && showScore} stars={stars} />
       </div>
     </div>
   );
