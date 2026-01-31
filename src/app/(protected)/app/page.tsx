@@ -70,6 +70,7 @@ async function fetchDailyData(date: string): Promise<{
   nuts: Nut[];
   dailyLogData: DailyLogData;
   streak: number;
+  recordDays: number;
 }> {
   const supabase = await createClient();
 
@@ -116,6 +117,15 @@ async function fetchDailyData(date: string): Promise<{
     throw new Error("ストリーク情報の取得に失敗しました");
   }
 
+  //  累計の記録日数（daily_logsの件数）
+  const { count: recordDaysCount, error: recordDaysError } = await supabase
+    .from("daily_logs")
+    .select("id", { count: "exact", head: true });
+
+  if (recordDaysError) {
+    throw new Error("記録日数の取得に失敗しました");
+  }
+
   return {
     nuts: nuts as Nut[],
     dailyLogData: {
@@ -123,11 +133,12 @@ async function fetchDailyData(date: string): Promise<{
       selectedNutIds,
     },
     streak: streakData?.current_streak || 0,
+    recordDays: recordDaysCount ?? 0,
   };
 }
 
 /**
- * YYYY-MM-DD → 1/28（水）
+ * YYYY-MM-DD → M/D（W）
  */
 function formatJaLabel(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
@@ -148,7 +159,8 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   try {
-    const { nuts, dailyLogData, streak } = await fetchDailyData(date);
+    const { nuts, dailyLogData, streak, recordDays } =
+      await fetchDailyData(date);
 
     // 保存済み判定（ログ行がある ＆ 選択が1つ以上）
     const savedSelectedIds = dailyLogData.selectedNutIds
@@ -213,7 +225,7 @@ export default async function Page({ searchParams }: PageProps) {
         <aside className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
           <div className="p-5">
             <Suspense fallback={<LoadingPlaceholder />}>
-              <CharacterStreak streak={streak} />
+              <CharacterStreak streak={streak} recordDays={recordDays} />
             </Suspense>
           </div>
         </aside>
