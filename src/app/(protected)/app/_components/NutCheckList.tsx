@@ -239,12 +239,25 @@ export default function NutCheckList({
             <label
               key={String(nutId)}
               className={[
-                "rounded-2xl cursor-pointer transition-all border",
-                "p-3",
+                "rounded-2xl cursor-pointer border p-3",
+                // 動きの土台
+                "transition-all duration-200 ease-out will-change-transform",
+                // ホバー
+                "hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(0,0,0,0.12)] hover:ring-1 hover:ring-black/5",
+                // クリック時
+                "active:translate-y-0 active:shadow-[0_10px_18px_rgba(0,0,0,0.10)]",
+
                 checked
-                  ? "bg-[#E6F1EC]/60 border-[#9FBFAF]/30 shadow-sm"
+                  ? [
+                      "bg-[#E6F1EC]/60 border-[#9FBFAF]/30",
+                      "shadow-[0_10px_18px_rgba(0,0,0,0.08)]",
+                      "hover:shadow-[0_20px_44px_rgba(0,0,0,0.14)]",
+                    ].join(" ")
                   : "bg-white hover:bg-[#FAFAFA] border-[#E6E6E4]/70",
-                isPending ? "opacity-70 cursor-not-allowed" : "",
+
+                isPending
+                  ? "opacity-70 cursor-not-allowed pointer-events-none"
+                  : "",
               ].join(" ")}
             >
               <div className="flex items-start gap-3">
@@ -258,7 +271,22 @@ export default function NutCheckList({
                     className="sr-only peer"
                     id={`nut-${nutId}`}
                   />
-                  <div className="w-6 h-6 bg-white border-2 border-[#9FBFAF] rounded-md peer-checked:bg-[#E38B3A] peer-checked:border-[#E38B3A] transition-colors" />
+
+                  <div
+                    className={[
+                      "w-6 h-6 rounded-md border-2 transition-all duration-200",
+                      "bg-white border-[#9FBFAF]",
+                      "shadow-[0_2px_0_rgba(0,0,0,0.12)]",
+                      "ring-1 ring-white/60",
+                      "hover:scale-110 hover:-translate-y-0.5 hover:shadow-[0_6px_12px_rgba(0,0,0,0.14)]",
+                      // checked
+                      "peer-checked:bg-[#F4B24E] peer-checked:border-[#E9A73F]",
+                      "peer-checked:shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_2px_0_rgba(0,0,0,0.12)]",
+                      // focus：アクセシビリティ
+                      "peer-focus-visible:ring-2 peer-focus-visible:ring-[#F9D977]/70 peer-focus-visible:ring-offset-2",
+                    ].join(" ")}
+                  />
+
                   {checked && (
                     <div className="absolute inset-0 flex items-center justify-center text-white">
                       <svg
@@ -325,14 +353,26 @@ export default function NutCheckList({
         <button
           onClick={saveSelection}
           disabled={isPending}
-          className="w-full rounded-2xl px-6 py-3.5 text-white font-semibold
-            bg-gradient-to-br from-[#F2B705] via-[#E38B3A] to-[#C46A1C]
-            shadow-[0_14px_30px_rgba(0,0,0,0.20)] ring-1 ring-white/30
-            transition-all duration-300 ease-out
-            hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_22px_44px_rgba(0,0,0,0.26)]
-            active:translate-y-0 active:scale-[0.98] active:shadow-[0_10px_22px_rgba(0,0,0,0.18)]
-            disabled:from-[#B9B9B9] disabled:via-[#AFAFAF] disabled:to-[#9B9B9B]
-            disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:cursor-not-allowed"
+          className={[
+            "w-full rounded-2xl px-6 py-3.5 text-white font-semibold",
+            "bg-gradient-to-b from-[#FBE38E] via-[#F4B24E] to-[#E98A3F]",
+            "shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_0_rgba(0,0,0,0.08),0_18px_32px_rgba(0,0,0,0.08)]",
+            "ring-1 ring-white/35",
+            "transition-all duration-200 ease-out",
+
+            //  hover
+            "hover:-translate-y-2 hover:scale-[1.02]",
+            "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_14px_0_rgba(0,0,0,0.12),0_32px_56px_rgba(0,0,0,0.14)]",
+
+            //  active：押し込み
+            "active:translate-y-2 active:scale-[0.99]",
+            "active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.18),0_4px_0_rgba(0,0,0,0.18),0_10px_18px_rgba(0,0,0,0.14)]",
+
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9D977]/70 focus-visible:ring-offset-2",
+
+            "disabled:from-[#B9B9B9] disabled:via-[#AFAFAF] disabled:to-[#9B9B9B]",
+            "disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:cursor-not-allowed",
+          ].join(" ")}
         >
           {isPending ? "保存中..." : "保存する"}
         </button>
