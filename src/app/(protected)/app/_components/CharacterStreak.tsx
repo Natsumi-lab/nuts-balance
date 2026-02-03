@@ -1,7 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { getGrowthStage, type GrowthStage } from "@/lib/domain/growth";
+import {
+  GROWTH_ICONS,
+  getGrowthProgress,
+  getCharacterIdByMonth,
+  getCharacterImageSrc,
+} from "@/lib/domain/growth";
 
 /**
  * CharacterStreakコンポーネントのプロパティ型
@@ -13,21 +18,6 @@ interface CharacterStreakProps {
   recordDays: number; // 累計記録日数（= 記録した回数）
 }
 
-/**
- * 成長メーター用アイコン定義（stage 1〜5に対応）
- */
-const GROWTH_ICONS = ["🌱", "🌿", "🌳", "🌳✨", "🌳🌰"];
-
-/**
- * 成長ステージ閾値（累計記録日数ベース）
- * - stage1: 0日〜
- * - stage2: 5日〜
- * - stage3: 10日〜
- * - stage4: 15日〜
- * - stage5: 21日〜
- */
-const STAGE_THRESHOLDS = [0, 5, 10, 15, 21] as const;
-
 export default function CharacterStreak({
   streak,
   recordDays,
@@ -35,40 +25,20 @@ export default function CharacterStreak({
   // -----------------------------
   // 1) 成長ステージ判定（累計記録日数が増えるほど成長）
   // -----------------------------
-  const stage: GrowthStage = getGrowthStage(recordDays);
+  const { stage, isMaxStage, remainingDays, progressPct, nextThreshold } =
+    getGrowthProgress(recordDays);
 
   // -----------------------------
   // 2) キャラ切り替え（奇数/偶数月で固定）
   // -----------------------------
   const month = new Date().getMonth() + 1;
-  const characterId = month % 2 === 0 ? "wl" : "al";
+  const characterId = getCharacterIdByMonth(month);
 
   // -----------------------------
   // 3) キャラ画像パス
   // -----------------------------
-  const imageSrc = `/nuts/${characterId}-stage${stage}.png`;
-
-  // -----------------------------
-  // 4) 「次の成長まで」表示用の進捗を計算
-  // -----------------------------
-  const currentThreshold = STAGE_THRESHOLDS[Math.max(0, stage - 1)];
-  const nextThreshold =
-    STAGE_THRESHOLDS[Math.min(STAGE_THRESHOLDS.length - 1, stage)];
-
-  // stage5(=最終) の場合、次の成長は存在しないので表示を変える
-  const isMaxStage = stage >= 5;
-  const remainingLogs = isMaxStage
-    ? 0
-    : Math.max(0, nextThreshold - recordDays);
-
-  // 進捗（0〜1）
-  const progressDenom = Math.max(1, nextThreshold - currentThreshold);
-  const progress = isMaxStage
-    ? 1
-    : Math.min(1, Math.max(0, (recordDays - currentThreshold) / progressDenom));
-
-  // パーセント表示（見た目だけ）
   const progressPct = Math.round(progress * 100);
+  const imageSrc = getCharacterImageSrc(characterId, stage);
 
   return (
     <div className="px-4 py-4">
@@ -148,7 +118,7 @@ export default function CharacterStreak({
                   <p className="mx-auto max-w-[24ch]">
                     あと{" "}
                     <span className="font-semibold text-[#333]">
-                      {remainingLogs}
+                      {remainingDays}
                     </span>{" "}
                     回の記録で成長します
                   </p>

@@ -1,7 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { getGrowthStage, type GrowthStage } from "@/lib/domain/growth";
+import {
+  GROWTH_ICONS,
+  getGrowthProgress,
+  getCharacterIdByMonth,
+  getCharacterImageSrc,
+} from "@/lib/domain/growth";
 
 type MonthlyCharacterProps = {
   /** その月の記録日数（累計ではない） */
@@ -12,56 +17,19 @@ type MonthlyCharacterProps = {
   maxStreak: number;
 };
 
-/**
- * 成長メーター用アイコン定義（stage 1〜5に対応）
- */
-const GROWTH_ICONS = ["🌱", "🌿", "🌳", "🌳✨", "🌳🌰"];
-
-/**
- * 成長ステージ閾値（記録日数ベース）
- * - stage1: 0日〜
- * - stage2: 5日〜
- * - stage3: 10日〜
- * - stage4: 15日〜
- * - stage5: 21日〜
- */
-const STAGE_THRESHOLDS = [0, 5, 10, 15, 21] as const;
-
-/**
- * 月次レポート用キャラクター表示
- * CharacterStreak.tsxの仕様を踏襲しつつ、月単位の記録日数で成長を表示
- */
 export default function MonthlyCharacter({
   recordDays,
   month,
   maxStreak,
 }: MonthlyCharacterProps) {
-  // 成長ステージ判定（月内記録日数ベース）
-  const stage: GrowthStage = getGrowthStage(recordDays);
+  const { stage, isMaxStage, remainingDays, progressPct, nextThreshold } =
+    getGrowthProgress(recordDays);
 
   // キャラ切り替え（偶数月 → wl、奇数月 → al）
-  const characterId = month % 2 === 0 ? "wl" : "al";
+  const characterId = getCharacterIdByMonth(month);
 
   // キャラ画像パス
-  const imageSrc = `/nuts/${characterId}-stage${stage}.png`;
-
-  // 進捗計算
-  const currentThreshold = STAGE_THRESHOLDS[Math.max(0, stage - 1)];
-  const nextThreshold =
-    STAGE_THRESHOLDS[Math.min(STAGE_THRESHOLDS.length - 1, stage)];
-
-  const isMaxStage = stage >= 5;
-  const remainingLogs = isMaxStage
-    ? 0
-    : Math.max(0, nextThreshold - recordDays);
-
-  const progressDenom = Math.max(1, nextThreshold - currentThreshold);
-  const progress = isMaxStage
-    ? 1
-    : Math.min(1, Math.max(0, (recordDays - currentThreshold) / progressDenom));
-
-  const progressPct = Math.round(progress * 100);
-
+  const imageSrc = getCharacterImageSrc(characterId, stage);
   return (
     <div className="px-4 py-4">
       <div className="flex flex-col items-center gap-4">
@@ -102,9 +70,7 @@ export default function MonthlyCharacter({
           </div>
 
           <div className="mt-1 text-center leading-tight">
-            <div className="text-xs font-medium text-[#555]">
-              今月の成長度
-            </div>
+            <div className="text-xs font-medium text-[#555]">今月の成長度</div>
             <div className="mt-1 text-[11px] text-[#777]">
               記録日数：
               <span className="ml-1 font-semibold text-[#333]">
@@ -132,7 +98,7 @@ export default function MonthlyCharacter({
                   <p className="mx-auto max-w-[20ch]">
                     あと{" "}
                     <span className="font-semibold text-[#333]">
-                      {remainingLogs}
+                      {remainingDays}
                     </span>{" "}
                     日の記録で成長
                   </p>
