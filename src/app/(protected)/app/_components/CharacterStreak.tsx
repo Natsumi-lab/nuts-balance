@@ -37,7 +37,6 @@ export default function CharacterStreak({
   // -----------------------------
   // 3) キャラ画像パス
   // -----------------------------
-  const progressPct = Math.round(progress * 100);
   const imageSrc = getCharacterImageSrc(characterId, stage);
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ScoreStars from "@/app/(protected)/_components/ScoreStars";
 import type { DailyScores, ScoreKey } from "@/lib/domain/score";
 
 export type TodayScoreProps = {
@@ -18,36 +19,6 @@ const LABELS: Record<ScoreKey, string> = {
   vitamin: "ビタミン",
   variety: "バラエティ",
 };
-
-function StarsRow({ label, value }: { label: string; value: number }) {
-  const clamped = Math.max(0, Math.min(5, value));
-
-  return (
-    <div className="flex items-center gap-2 text-left">
-      <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-[#333]">
-        {label}
-      </div>
-
-      <div className="flex items-center gap-0.5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <span
-            key={i}
-            className={[
-              "text-xl leading-none",
-              i < clamped ? "text-[#F2B705]" : "text-[#D8D8D8]",
-            ].join(" ")}
-            aria-hidden="true"
-          >
-            ★
-          </span>
-        ))}
-        <span className="ml-1 w-[36px] text-right text-xs font-semibold text-[#555]">
-          {clamped}/5
-        </span>
-      </div>
-    </div>
-  );
-}
 
 export default function TodayScore({
   isSaved,
@@ -113,7 +84,15 @@ export default function TodayScore({
             <div className="mt-5 text-center">
               <div className="inline-block min-w-[240px] px-4 space-y-2">
                 {rows.map((r) => (
-                  <StarsRow key={r.key} label={r.label} value={r.value} />
+                  <div
+                    key={r.key}
+                    className="flex items-center gap-2 text-left"
+                  >
+                    <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-[#333]">
+                      {r.label}
+                    </div>
+                    <ScoreStars value={r.value} />
+                  </div>
                 ))}
               </div>
             </div>

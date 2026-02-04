@@ -33,7 +33,7 @@ export type DailyLog = {
 export type DailyLogItem = {
   id: string;
   daily_log_id: string;
-  nut_id: string;
+  nut_id: number;
   created_at: string;
 };
 
