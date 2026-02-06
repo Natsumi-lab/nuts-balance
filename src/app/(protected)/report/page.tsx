@@ -1,11 +1,8 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Nut } from "@/lib/types";
-import {
-  aggregateMonthlyReport,
-  generateMonthlyComment,
-  type DailyRecord,
-} from "@/lib/domain/report";
+import { aggregateMonthlyReport, type DailyRecord } from "@/lib/domain/report";
+import { generateMonthlyComment } from "@/lib/domain/comment";
 import MonthSelector from "./_components/MonthSelector";
 import MonthlyScoreCard from "./_components/MonthlyScoreCard";
 import NutConsumptionChart from "./_components/NutConsumptionChart";
@@ -175,7 +172,8 @@ export default async function ReportPage({ searchParams }: PageProps) {
   }
 
   try {
-    const { nuts, dailyRecords, month } = await fetchMonthlyReportData(yearMonth);
+    const { nuts, dailyRecords, month } =
+      await fetchMonthlyReportData(yearMonth);
     const daysInMonth = getDaysInMonth(yearMonth);
 
     // 月次レポートデータを集計

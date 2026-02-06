@@ -80,3 +80,90 @@ export function generateDailyComment({ date, scoreResult }: CommentInput): strin
  * isSaved=false の時に出すメッセージ
  */
 export const SCORE_EMPTY_MESSAGE = "保存するとスコアが表示されます";
+
+// ========================================
+// 月次コメント生成
+// ========================================
+
+/** 月次用スコアラベル */
+const MONTHLY_SCORE_LABELS: Record<ScoreKey, string> = {
+  antioxidant: "抗酸化",
+  mineral: "ミネラル",
+  fiber: "食物繊維",
+  vitamin: "ビタミン",
+  variety: "バラエティ",
+};
+
+/** 記録0日の場合のコメント */
+export const MONTHLY_EMPTY_MESSAGE =
+  "今月はまだ記録がありません。ナッツを食べて記録を始めましょう！";
+
+/** バランスが良い場合のテンプレート */
+const MONTHLY_BALANCE_TEMPLATES = [
+  "今月は全体的にバランスの取れた摂取ができました。この調子で続けましょう。",
+  "どの栄養素も偏りなく摂取できています。素晴らしい習慣です。",
+  "今月は栄養バランスが整っていました。来月も継続できると良いですね。",
+  "バランスの良い月でした。健康的なナッツ生活が続いています。",
+] as const;
+
+/** 特定のスコアが強い場合のテンプレート */
+const MONTHLY_STRENGTH_TEMPLATES = [
+  "今月は「{label}」が特に充実していました。来月は他の栄養素も意識してみましょう。",
+  "「{label}」をしっかり摂取できた月でした。バランスも意識するとさらに良いですね。",
+  "今月の強みは「{label}」でした。得意分野を活かしつつ、幅を広げていきましょう。",
+  "「{label}」が際立った月でした。この調子で他の栄養素も補っていきましょう。",
+] as const;
+
+/** 記録日数が多い場合の追加コメント */
+const HIGH_RECORD_DAYS_TEMPLATES = [
+  "今月は{days}日も記録できました！",
+  "{days}日間の記録、お疲れさまでした。",
+  "素晴らしい！{days}日間継続できています。",
+] as const;
+
+/**
+ * 月次コメント生成入力
+ */
+export type MonthlyCommentInput = {
+  yearMonth: string;
+  monthlyScore: {
+    recordDays: number;
+    isBalanced: boolean;
+    strongestKey: ScoreKey;
+  };
+};
+
+/**
+ * 月次コメントを生成
+ */
+export function generateMonthlyComment(
+  input: MonthlyCommentInput
+): string {
+  const { yearMonth, monthlyScore } = input;
+
+  if (monthlyScore.recordDays === 0) {
+    return MONTHLY_EMPTY_MESSAGE;
+  }
+
+  const seedBase = `${yearMonth}:monthly`;
+  let comment: string;
+
+  if (monthlyScore.isBalanced) {
+    comment = pickDeterministic(MONTHLY_BALANCE_TEMPLATES, seedBase);
+  } else {
+    const label = MONTHLY_SCORE_LABELS[monthlyScore.strongestKey];
+    const tmpl = pickDeterministic(MONTHLY_STRENGTH_TEMPLATES, seedBase);
+    comment = tmpl.replace("{label}", label);
+  }
+
+  if (monthlyScore.recordDays >= 15) {
+    const daysComment = pickDeterministic(
+      HIGH_RECORD_DAYS_TEMPLATES,
+      `${seedBase}:days`
+    ).replace("{days}", String(monthlyScore.recordDays));
+    comment = `${daysComment} ${comment}`;
+  }
+
+  return comment;
+}
+
