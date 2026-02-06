@@ -8,52 +8,40 @@ import {
   getCharacterImageSrc,
 } from "@/lib/domain/growth";
 
-/**
- * CharacterStreakコンポーネントのプロパティ型
- * - streak: 「連続で記録できた日数」
- * - recordDays: 「累計で記録した日数」
- */
-interface CharacterStreakProps {
-  streak: number; // 連続記録日数
-  recordDays: number; // 累計記録日数（= 記録した回数）
-}
+type MonthlyCharacterProps = {
+  /** その月の記録日数（累計ではない） */
+  recordDays: number;
+  /** 対象月（1-12） */
+  month: number;
+  /** 月内最大ストリーク */
+  maxStreak: number;
+};
 
-export default function CharacterStreak({
-  streak,
+export default function MonthlyCharacter({
   recordDays,
-}: CharacterStreakProps) {
-  // -----------------------------
-  // 1) 成長ステージ判定（累計記録日数が増えるほど成長）
-  // -----------------------------
+  month,
+  maxStreak,
+}: MonthlyCharacterProps) {
   const { stage, isMaxStage, remainingDays, progressPct, nextThreshold } =
     getGrowthProgress(recordDays);
 
-  // -----------------------------
-  // 2) キャラ切り替え（奇数/偶数月で固定）
-  // -----------------------------
-  const month = new Date().getMonth() + 1;
+  // キャラ切り替え（偶数月 → wl、奇数月 → al）
   const characterId = getCharacterIdByMonth(month);
 
-  // -----------------------------
-  // 3) キャラ画像パス
-  // -----------------------------
+  // キャラ画像パス
   const imageSrc = getCharacterImageSrc(characterId, stage);
-
   return (
     <div className="px-4 py-4">
-      {/* 全体 */}
       <div className="flex flex-col items-center gap-4">
-        {/* =========================
-            キャラクター画像エリア
-        ========================= */}
-        <div className="relative w-full max-w-[280px] aspect-[3/4] bg-gradient-to-b from-[#FDFDFB] to-[#F8F8F6] rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden">
+        {/* キャラクター画像エリア */}
+        <div className="relative w-full max-w-[240px] aspect-[3/4] bg-gradient-to-b from-[#FDFDFB] to-[#F8F8F6] rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden">
           <div className="absolute inset-0 p-4">
             <div className="relative w-full h-full animate-float">
               <Image
                 src={imageSrc}
                 alt="ナッツキャラクター"
                 fill
-                sizes="(max-width: 768px) 70vw, 280px"
+                sizes="(max-width: 768px) 60vw, 240px"
                 className="object-contain drop-shadow-sm"
                 priority
               />
@@ -61,9 +49,7 @@ export default function CharacterStreak({
           </div>
         </div>
 
-        {/* =========================
-            成長メーター + 育成の説明文
-        ========================= */}
+        {/* 成長メーター */}
         <div className="flex flex-col items-center gap-1">
           <div className="flex items-center gap-0.5 text-lg">
             {GROWTH_ICONS.map((icon, index) => {
@@ -84,11 +70,9 @@ export default function CharacterStreak({
           </div>
 
           <div className="mt-1 text-center leading-tight">
-            <div className="text-xs font-medium text-[#555]">
-              記録を増やして、キャラを育てよう
-            </div>
+            <div className="text-xs font-medium text-[#555]">今月の成長度</div>
             <div className="mt-1 text-[11px] text-[#777]">
-              今月の成長カウント（記録）：
+              記録日数：
               <span className="ml-1 font-semibold text-[#333]">
                 {recordDays}
               </span>
@@ -97,29 +81,26 @@ export default function CharacterStreak({
           </div>
         </div>
 
-        {/* =========================
-            次の成長まで
-            - 進捗バー
-        ========================= */}
-        <div className="w-full max-w-[280px] rounded-2xl bg-white/80 border border-[#EDEDED] shadow-sm p-4">
+        {/* 進捗バー */}
+        <div className="w-full max-w-[240px] rounded-2xl bg-white/80 border border-[#EDEDED] shadow-sm p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="text-center text-sm font-semibold text-[#333]">
-                {isMaxStage ? "最大まで成長しました" : "次の成長まで"}
+                {isMaxStage ? "最大成長達成！" : "次の成長まで"}
               </div>
 
               <div className="mt-2 text-center text-xs text-[#666] leading-relaxed">
                 {isMaxStage ? (
-                  <p className="mx-auto max-w-[24ch]">
-                    すごい！ここが最終形です。記録を続けて、習慣をキープしましょう。
+                  <p className="mx-auto max-w-[20ch]">
+                    素晴らしい！今月は最大まで成長しました。
                   </p>
                 ) : (
-                  <p className="mx-auto max-w-[24ch]">
+                  <p className="mx-auto max-w-[20ch]">
                     あと{" "}
                     <span className="font-semibold text-[#333]">
                       {remainingDays}
                     </span>{" "}
-                    回の記録で成長します
+                    日の記録で成長
                   </p>
                 )}
               </div>
@@ -142,15 +123,13 @@ export default function CharacterStreak({
               現在{" "}
               <span className="font-semibold text-[#333]">{recordDays}</span> /{" "}
               <span className="font-semibold text-[#333]">{nextThreshold}</span>{" "}
-              日（累計）
+              日
             </div>
           )}
         </div>
 
-        {/* =========================
-            連続記録（ストリーク）
-        ========================= */}
-        <div className="w-full max-w-[280px] bg-white/80 rounded-2xl shadow-sm border border-[#F0E8E6] px-4 py-3">
+        {/* 月内最大ストリーク */}
+        <div className="w-full max-w-[240px] bg-white/80 rounded-2xl shadow-sm border border-[#F0E8E6] px-4 py-3">
           <div className="flex flex-col items-center text-center gap-1">
             <div className="text-xs text-[#666] flex items-center gap-2">
               <span className="text-[#E05A4A] animate-pulse-slow">
@@ -167,13 +146,13 @@ export default function CharacterStreak({
                   />
                 </svg>
               </span>
-              <span>連続で記録できた最大日数</span>
+              <span>今月の最大連続記録</span>
             </div>
 
             <div className="text-sm font-medium text-[#333]">
               継続
               <span className="ml-2 text-lg font-bold text-[#E05A4A]">
-                {streak}
+                {maxStreak}
               </span>
               <span className="ml-1 text-sm font-semibold text-[#E05A4A]">
                 日
