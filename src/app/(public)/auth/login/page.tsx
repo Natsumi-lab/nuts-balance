@@ -4,15 +4,17 @@ import { signInWithPassword } from "./actions";
 type PageProps = {
   searchParams?: Promise<{
     error?: string;
+    info?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const error = params?.error;
+  const info = params?.info;
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-8">
+    <div className="flex min-h-[100dvh] items-center justify-center px-4 py-8">
       {/* カード：ホバーで浮き出るインタラクション */}
       <div
         className={[
@@ -49,6 +51,23 @@ export default async function LoginPage({ searchParams }: PageProps) {
           >
             <p className="text-sm font-medium text-[hsl(var(--accent-foreground))]">
               {error}
+            </p>
+          </div>
+        )}
+
+        {/* インフォメッセージ表示（サインアップ成功時など） */}
+        {info && (
+          <div
+            className={[
+              "mt-5 rounded-xl border",
+              "border-[hsl(var(--primary))]",
+              "bg-[hsl(var(--primary)/0.1)]",
+              "px-4 py-3",
+            ].join(" ")}
+            role="status"
+          >
+            <p className="text-sm font-medium text-[hsl(var(--primary))]">
+              {info}
             </p>
           </div>
         )}
