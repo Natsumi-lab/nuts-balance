@@ -1,21 +1,15 @@
-import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import Splash from "./Splash";
 
-export default function PublicHomePage() {
-  return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold">Nuts Balance</h1>
-      <p className="mt-2 text-gray-600">
-        ナッツ摂取を日次で記録し、ストリークや集計を可視化するアプリです。
-      </p>
+export default async function PublicHomePage() {
+  const supabase = await createClient();
 
-      <div className="mt-6">
-        <Link
-          href="/auth/login"
-          className="inline-flex items-center rounded-md bg-black px-4 py-2 text-white"
-        >
-          ログインへ
-        </Link>
-      </div>
-    </main>
-  );
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // 遷移先だけを決める
+  const nextPath = session ? "/app" : "/auth/login";
+
+  return <Splash nextPath={nextPath} />;
 }
