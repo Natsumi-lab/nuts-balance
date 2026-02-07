@@ -1,21 +1,50 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function PublicHomePage() {
-  return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold">Nuts Balance</h1>
-      <p className="mt-2 text-gray-600">
-        ナッツ摂取を日次で記録し、ストリークや集計を可視化するアプリです。
-      </p>
+  const router = useRouter();
 
-      <div className="mt-6">
-        <Link
-          href="/auth/login"
-          className="inline-flex items-center rounded-md bg-black px-4 py-2 text-white"
-        >
-          ログインへ
-        </Link>
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace("/auth/login");
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, [router]);
+
+  return (
+    <main className="flex min-h-[100dvh] items-center justify-center">
+      <div
+        className={[
+          "flex flex-col items-center opacity-0",
+          "animate-[fadeIn_0.9s_ease-out_forwards]",
+        ].join(" ")}
+      >
+        <Image
+          src="/nuts/logo.png"
+          alt="Nuts Balance"
+          width={240}
+          height={240}
+          priority
+          className="drop-shadow-[0_14px_28px_rgba(0,0,0,0.14)]"
+        />
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(1);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+        }
+      `}</style>
     </main>
   );
 }
