@@ -87,7 +87,7 @@ function calcMonthlyStreak(logDatesYmd: string[], baseYmd: string): number {
   const base = parseYmd(baseYmd);
   const monthStart = new Date(base.getFullYear(), base.getMonth(), 1);
 
-  let cur = new Date(base);
+  const cur = new Date(base);
   let count = 0;
 
   while (cur.getTime() >= monthStart.getTime()) {

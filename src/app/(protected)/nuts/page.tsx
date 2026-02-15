@@ -25,9 +25,9 @@ export default async function NutsPage() {
 
   if (error) {
     return (
-      <div className="rounded-2xl bg-white/80 p-6 shadow ring-1 ring-black/5">
-        <h1 className="text-2xl font-bold">ナッツの知識</h1>
-        <p className="mt-2 text-sm text-red-600">
+      <div className="rounded-2xl border border-border/20 bg-card p-6 shadow-lg">
+        <h1 className="text-2xl font-bold text-foreground">ナッツの知識</h1>
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">
           読み込みに失敗しました：{error.message}
         </p>
       </div>
@@ -37,41 +37,45 @@ export default async function NutsPage() {
   const nuts = (data ?? []) as Nut[];
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">ナッツの知識</h1>
+    <div className="grid grid-cols-1 gap-5 lg:gap-6">
+      {/* ヘッダー */}
+      <header className="rounded-2xl border border-white/20 dark:border-white/10 bg-card p-5 shadow-lg">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          ナッツの知識
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           6種類のナッツの特徴とスコアを一覧で確認できます
         </p>
       </header>
 
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* ナッツ一覧 */}
+      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         {nuts.map((nut) => {
           const miniSrc = `/nuts/mini-${nutSlugFromName(nut.name)}.png`;
 
           return (
             <article
               key={nut.id}
-              className="group rounded-2xl bg-white/80 p-5 ring-1 ring-black/5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+              className="group rounded-2xl border border-white/20 dark:border-white/10 bg-card p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
               {/* ナッツ名（中央） */}
-              <h2 className="mb-4 text-center text-lg font-semibold">
+              <h2 className="mb-4 text-center text-lg font-semibold text-foreground">
                 {nut.name}
               </h2>
 
               {/* 画像 + 説明文 */}
               <div className="grid grid-cols-[64px_1fr] gap-4">
-                <div className="relative h-16 w-16 self-center overflow-hidden rounded-2xl ring-1 ring-black/5 bg-[#FAFAF8]">
+                <div className="relative h-16 w-16 self-center overflow-hidden rounded-xl border border-border/30 bg-muted/30">
                   <Image
                     src={miniSrc}
                     alt={nut.name}
                     fill
-                    className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
+                    className="rounded-xl object-contain p-1 transition-transform duration-300 group-hover:scale-105"
                     sizes="64px"
                   />
                 </div>
 
-                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                   {nutDescriptions[nut.name] ?? nut.description}
                 </p>
               </div>
@@ -87,11 +91,28 @@ export default async function NutsPage() {
           );
         })}
       </section>
+
+      {/* 内容量の目安 */}
+      <section className="rounded-2xl border border-white/20 dark:border-white/10 bg-card p-5 shadow-lg">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
+          1日の目安量
+        </h2>
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 text-sm text-muted-foreground">
+          <p className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-accent" />
+            ナッツ全体で約25g（片手ひとつかみ程度）
+          </p>
+          <p className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-primary" />
+            無塩・素焼きタイプがおすすめ
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
 
-/* ---------- utils ---------- */
+/* ---------- ユーティリティ ---------- */
 
 function nutSlugFromName(name: string) {
   const map: Record<string, string> = {
@@ -129,13 +150,11 @@ function ScoreCell({ label, value }: { label: string; value: number }) {
   const v = Math.max(0, Math.min(5, Number(value) || 0));
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl bg-white/60 px-4 py-2 ring-1 ring-black/5">
-      {/* ラベルは1行固定（折り返し禁止） */}
+    <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 dark:bg-muted/30 px-4 py-2 border border-border/20">
       <span className="text-xs font-medium text-muted-foreground whitespace-nowrap w-[5.5rem]">
         {label}
       </span>
 
-      {/* ★は縮まない + 少しだけ小さくして収まりを良くする */}
       <span className="shrink-0 text-sm">
         <Stars value={v} max={5} />
       </span>
@@ -149,7 +168,11 @@ function Stars({ value, max }: { value: number; max: number }) {
       {Array.from({ length: max }).map((_, i) => (
         <span
           key={i}
-          className={i < value ? "text-yellow-500" : "text-black/20"}
+          className={
+            i < value
+              ? "text-yellow-500 dark:text-yellow-400"
+              : "text-foreground/20"
+          }
         >
           ★
         </span>
