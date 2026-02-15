@@ -16,21 +16,23 @@ export default function NavBar() {
 
   // 共通ベース
   const base =
-    "min-w-[96px] px-4 py-2 rounded-2xl text-sm text-center font-medium whitespace-nowrap transition-all duration-200 ease-out";
+    "min-w-[96px] px-4 py-2 rounded-2xl text-sm text-center font-medium whitespace-nowrap";
 
-  // 非アクティブ
-  const inactive =
+  // 共通スタイル
+  const baseStyle =
+    "transition-all duration-200 ease-out " +
     "bg-gradient-to-b from-[#FFF1B8] via-[#FFE08A] to-[#F7C948] text-[#6B4E00] " +
     "shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_14px_rgba(0,0,0,0.16)] " +
-    "hover:-translate-y-1 hover:bg-gradient-to-b hover:from-[#FBE38E] hover:via-[#F4B24E] hover:to-[#E98A3F] " +
-    "hover:text-white hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_24px_rgba(233,138,63,0.4)]";
+    "hover:-translate-y-1 " +
+    "hover:bg-gradient-to-b hover:from-[#FBE38E] hover:via-[#F4B24E] hover:to-[#E98A3F] " +
+    "hover:text-white " +
+    "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_24px_rgba(233,138,63,0.4)]";
+
+  // 非アクティブ
+  const inactive = baseStyle;
 
   // アクティブ
-  const active =
-    "bg-gradient-to-b from-[#FBE38E] via-[#F4B24E] to-[#E98A3F] text-white " +
-    "shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.08),0_10px_22px_rgba(233,138,63,0.32)] " +
-    "ring-1 ring-[#E98A3F]/30 " +
-    "-translate-y-1";
+  const active = baseStyle + " font-semibold";
 
   return (
     <header className="sticky top-0 z-10 border-b border-[#F2E8C9] bg-white">

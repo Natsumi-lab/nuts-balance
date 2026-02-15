@@ -23,7 +23,13 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session && request.nextUrl.pathname.startsWith("/app")) {
+  // 認証が必要なルートへの未ログインアクセスをリダイレクト
+  const protectedPaths = ["/app", "/nuts", "/settings"];
+  const isProtectedRoute = protectedPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  if (!session && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
@@ -33,5 +39,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/settings/:path*"],
+  matcher: ["/app/:path*", "/nuts/:path*", "/settings/:path*"],
 };
