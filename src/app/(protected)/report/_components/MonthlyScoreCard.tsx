@@ -23,7 +23,7 @@ const LABELS: Record<ScoreKey, string> = {
 function ScoreRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center gap-2 text-left">
-      <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-[#333]">
+      <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-card-foreground">
         {label}
       </div>
       <ScoreStars value={value} />
@@ -33,6 +33,8 @@ function ScoreRow({ label, value }: { label: string; value: number }) {
 
 /**
  * 月次スコア表示カード
+ * - スコアとコメントを横並び（デスクトップ）
+ * - モバイルでは縦積み
  */
 export default function MonthlyScoreCard({
   scores,
@@ -48,38 +50,40 @@ export default function MonthlyScoreCard({
   ];
 
   return (
-    <div className="rounded-2xl border border-[#E6E6E4] bg-white shadow-sm">
-      <div className="p-5">
-        <div className="text-center">
-          <div className="text-xl font-semibold text-[#2F3A34]">
+    <div className="rounded-2xl border border-border bg-card shadow-sm">
+      <div className="p-4 md:p-5">
+        <div className="text-center mb-4">
+          <div className="text-xl font-semibold text-card-foreground">
             今月の平均スコア
           </div>
         </div>
 
         {isEmpty ? (
-          <div className="mt-4 rounded-xl bg-[#F6F7F6] px-3 py-3 text-sm text-[#2F3A34] text-center">
+          <div className="rounded-xl bg-muted px-3 py-3 text-sm text-card-foreground text-center">
             記録がありません
           </div>
         ) : (
-          <>
-            <div className="mt-5 text-center">
-              <div className="inline-block min-w-[240px] px-4 space-y-2">
+          /* スコアとコメントを横並び（md以上）、モバイルでは縦積み */
+          <div className="flex flex-col md:flex-row md:items-start md:gap-5">
+            {/* スコア：内容幅にして、右側に余白を溜めない */}
+            <div className="md:w-fit md:shrink-0">
+              <div className="space-y-1.5">
                 {order.map((key) => (
                   <ScoreRow key={key} label={LABELS[key]} value={scores[key]} />
                 ))}
               </div>
             </div>
 
-            {/* コメント */}
+            {/* コメント：残り幅を使用 */}
             {comment && (
-              <div className="mt-4 rounded-xl bg-[#F6F7F6] px-3 py-2 text-sm text-[#2F3A34]">
-                <div className="text-xs font-semibold text-[#6B7F75]">
+              <div className="mt-4 md:mt-0 md:flex-1 rounded-xl bg-muted px-3 py-2 text-sm text-card-foreground">
+                <div className="text-xs font-semibold text-muted-foreground">
                   今月のコメント
                 </div>
                 <div className="mt-1">{comment}</div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

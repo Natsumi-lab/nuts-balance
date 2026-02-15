@@ -34,14 +34,14 @@ export default function MonthlyCharacter({
     <div className="px-4 py-4">
       <div className="flex flex-col items-center gap-4">
         {/* キャラクター画像エリア */}
-        <div className="relative w-full max-w-[240px] aspect-[3/4] bg-gradient-to-b from-[#FDFDFB] to-[#F8F8F6] rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden">
+        <div className="relative w-full max-w-[280px] aspect-[3/4] bg-gradient-to-b from-[#FDFDFB] to-[#F8F8F6] rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden">
           <div className="absolute inset-0 p-4">
             <div className="relative w-full h-full animate-float">
               <Image
                 src={imageSrc}
                 alt="ナッツキャラクター"
                 fill
-                sizes="(max-width: 768px) 60vw, 240px"
+                sizes="(max-width: 768px) 70vw, 280px"
                 className="object-contain drop-shadow-sm"
                 priority
               />
@@ -82,7 +82,7 @@ export default function MonthlyCharacter({
         </div>
 
         {/* 進捗バー */}
-        <div className="w-full max-w-[240px] rounded-2xl bg-white/80 border border-[#EDEDED] shadow-sm p-4">
+        <div className="w-full max-w-[280px] rounded-2xl bg-white/80 border border-[#EDEDED] shadow-sm p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="text-center text-sm font-semibold text-[#333]">
@@ -129,7 +129,7 @@ export default function MonthlyCharacter({
         </div>
 
         {/* 月内最大ストリーク */}
-        <div className="w-full max-w-[240px] bg-white/80 rounded-2xl shadow-sm border border-[#F0E8E6] px-4 py-3">
+        <div className="w-full max-w-[280px] bg-white/80 rounded-2xl shadow-sm border border-[#F0E8E6] px-4 py-3">
           <div className="flex flex-col items-center text-center gap-1">
             <div className="text-xs text-[#666] flex items-center gap-2">
               <span className="text-[#E05A4A] animate-pulse-slow">
