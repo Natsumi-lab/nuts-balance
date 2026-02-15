@@ -12,7 +12,9 @@ type MonthSelectorProps = {
  * - 前月 / 次月ボタン
  * - 現在の年月表示
  */
-export default function MonthSelector({ currentYearMonth }: MonthSelectorProps) {
+export default function MonthSelector({
+  currentYearMonth,
+}: MonthSelectorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -68,7 +70,7 @@ export default function MonthSelector({ currentYearMonth }: MonthSelectorProps) 
       </button>
 
       {/* 年月表示 */}
-      <div className="text-xl font-bold text-[#333] min-w-[140px] text-center">
+      <div className="text-xl font-bold text-foreground min-w-[140px] text-center">
         {displayText}
       </div>
 
