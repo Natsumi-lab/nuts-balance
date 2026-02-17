@@ -35,7 +35,7 @@ export default function NavBar() {
   const active = baseStyle + " font-semibold";
 
   return (
-    <header className="sticky top-0 z-10 border-b border-[#F2E8C9] bg-white">
+    <header className="sticky top-0 z-10 border-b border-[#F2E8C9] bg-white dark:border-border dark:bg-card">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* ロゴ */}
         <Link
@@ -65,7 +65,7 @@ export default function NavBar() {
           {/* テキストロゴ */}
           <span
             className="
-              text-2xl leading-none text-[#333]
+              text-2xl leading-none text-[#333] dark:text-foreground
               transition-all duration-200
               group-hover:-translate-y-0.5
               drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]
