@@ -122,12 +122,27 @@ export default function NutCheckList({
     setSelected(initialSelected);
   }, [initialSelected, date]);
 
+  //  日付が変わったら結果表示は消す（残り続ける問題の解消）
+  useEffect(() => {
+    setResult(null);
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, [date]);
+
   // タイマー掃除
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
+
+  const showResultTemporarily = (res: ActionResult, ms = 2000) => {
+    setResult(res);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setResult(null), ms);
+  };
 
   const toggleSelection = (nutId: number) => {
     setSelected((prev) =>
@@ -143,21 +158,19 @@ export default function NutCheckList({
     startTransition(async () => {
       try {
         const res = await upsertDailyLog(date, selected);
-        setResult(res);
 
         if (res.success) {
-          if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-          hideTimerRef.current = setTimeout(() => setResult(null), 2000);
-
-          // 重要：表示はサーバー事実に寄せるため refresh
+          showResultTemporarily(res, 2000);
           router.refresh();
+        } else {
+          showResultTemporarily(res, 2500);
         }
       } catch (error) {
         console.error("保存中にエラーが発生しました:", error);
-        setResult({
-          success: false,
-          message: "予期せぬエラーが発生しました",
-        });
+        showResultTemporarily(
+          { success: false, message: "予期せぬエラーが発生しました" },
+          2500,
+        );
       }
     });
   };
@@ -179,9 +192,45 @@ export default function NutCheckList({
   const todayYmd = getJstTodayYmd();
   const isNextDisabled = date >= todayYmd;
 
+  //  「今日のみ」スキップ可能
+  const isToday = date === todayYmd;
+  const isSkipDisabled = isPending || !isToday;
+
+  const handleSkipToday = () => {
+    setResult(null);
+
+    // UI側でもブロック（念のため）
+    if (!isToday) {
+      showResultTemporarily(
+        { success: false, message: "スキップは今日のみ可能です" },
+        2500,
+      );
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await skipToday(date);
+
+        if (res.success) {
+          showResultTemporarily(res, 2000);
+          router.refresh();
+        } else {
+          showResultTemporarily(res, 2500);
+        }
+      } catch (error) {
+        console.error("Skip error:", error);
+        showResultTemporarily(
+          { success: false, message: "スキップ処理中にエラーが発生しました" },
+          2500,
+        );
+      }
+    });
+  };
+
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm">
-      {/* ✅ ヘッダー：中央に日付 + 左右に前日/翌日 */}
+      {/*  ヘッダー：中央に日付 + 左右に前日/翌日 */}
       <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex justify-start">
           <button
@@ -226,7 +275,7 @@ export default function NutCheckList({
         </div>
       </div>
 
-      {/* ✅ ナッツ：縦2×横3 */}
+      {/*  ナッツ：縦2×横3 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {nuts.map((nut) => {
           const nutId = nut.id;
@@ -346,12 +395,8 @@ export default function NutCheckList({
           {/* 左：今日は食べなかった */}
           <button
             type="button"
-            onClick={async () => {
-              const res = await skipToday(date);
-              setResult(res);
-              router.refresh();
-            }}
-            disabled={isPending}
+            onClick={handleSkipToday}
+            disabled={isSkipDisabled}
             className={[
               "rounded-2xl px-4 py-3 font-semibold",
               "bg-white border border-[#E6E6E4] text-[#333]",
@@ -360,6 +405,7 @@ export default function NutCheckList({
               "active:translate-y-0 active:shadow-sm",
               "disabled:opacity-60 disabled:cursor-not-allowed",
             ].join(" ")}
+            title={!isToday ? "スキップは今日のみ可能です" : undefined}
           >
             今日は食べなかった
           </button>

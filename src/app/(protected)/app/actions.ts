@@ -35,20 +35,14 @@ export async function upsertDailyLog(
     }
 
     if (!user) {
-      return {
-        success: false,
-        message: 'ログインが必要です',
-      };
+      return { success: false, message: 'ログインが必要です' };
     }
 
     // -----------------------------
     // 2. 日付バリデーション
     // -----------------------------
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return {
-        success: false,
-        message: '日付の形式が不正です',
-      };
+      return { success: false, message: '日付の形式が不正です' };
     }
 
     // -----------------------------
@@ -58,12 +52,9 @@ export async function upsertDailyLog(
       .map((v) => (typeof v === 'string' ? Number(v) : v))
       .filter((v) => Number.isFinite(v)) as number[];
 
-    // ✅ 未選択は保存不可
+    //  未選択は保存不可（=「記録」とは摂取があった日）
     if (nutIdsNum.length === 0) {
-      return {
-        success: false,
-        message: 'ナッツを1つ以上選択してください',
-      };
+      return { success: false, message: 'ナッツを1つ以上選択してください' };
     }
 
     // -----------------------------
@@ -76,60 +67,72 @@ export async function upsertDailyLog(
 
     if (rpcError) {
       console.error('RPC 保存エラー:', rpcError);
-      return {
-        success: false,
-        message: '日誌の保存に失敗しました',
-      };
+      return { success: false, message: '日誌の保存に失敗しました' };
     }
 
     revalidatePath('/app');
 
-    return {
-      success: true,
-      message: '保存しました',
-    };
+    return { success: true, message: '保存しました' };
   } catch (error) {
     console.error('Upsert error:', error);
-    return {
-      success: false,
-      message: '予期せぬエラーが発生しました',
-    };
+    return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
 
 /**
- * 「今日は食べなかった」ボタン用 Server Action
+ * 「今日は食べなかった」
  *
- * - DBには何も保存しない
- * - ストリークは自然に切れる（daily_logs が存在しないため）
+ * - daily_logs は作らない（= 摂取があった日だけが「記録」）
+ * - daily_skips に保存する（= 意図的に食べなかった日）
+ * - 同日に daily_logs が存在していた場合は削除してスキップへ置換（DB側RPCで担保）
+ * - ストリークは切れる（current_streak = 0）
+ *
+ * @param date - 対象日付（YYYY-MM-DD形式）
  */
 export async function skipToday(date: string): Promise<ActionResult> {
   try {
-    // 必要なら認証確認だけ入れてもOK（必須ではない）
     const supabase = await createClient();
+
+    // -----------------------------
+    // 1. 認証ユーザー取得
+    // -----------------------------
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return {
-        success: false,
-        message: 'ログインが必要です',
-      };
+    if (userError) {
+      console.error('auth.getUser error:', userError);
     }
 
-    // DB操作は行わない
+    if (!user) {
+      return { success: false, message: 'ログインが必要です' };
+    }
+
+    // -----------------------------
+    // 2. 日付バリデーション
+    // -----------------------------
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return { success: false, message: '日付の形式が不正です' };
+    }
+
+    // -----------------------------
+    // 3. RPC 実行（スキップ永続化）
+    // -----------------------------
+    const { error: rpcError } = await supabase.rpc('mark_daily_skip', {
+      p_log_date: date,
+    });
+
+    if (rpcError) {
+      console.error('RPC スキップエラー:', rpcError);
+      return { success: false, message: 'スキップの保存に失敗しました' };
+    }
+
     revalidatePath('/app');
 
-    return {
-      success: true,
-      message: '今日は🥜食べませんでした',
-    };
+    return { success: true, message: '今日は🥜食べませんでした' };
   } catch (error) {
     console.error('Skip error:', error);
-    return {
-      success: false,
-      message: 'スキップ処理中にエラーが発生しました',
-    };
+    return { success: false, message: 'スキップ処理中にエラーが発生しました' };
   }
 }
