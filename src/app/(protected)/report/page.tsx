@@ -22,11 +22,11 @@ interface PageProps {
  */
 function LoadingPlaceholder() {
   return (
-    <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-md">
+    <div className="bg-card border border-border rounded-2xl shadow-md">
       <div className="flex items-center justify-center h-64 p-4">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-3 border-[#9FBFAF] border-t-[#E38B3A]"></div>
-          <p className="text-sm text-[#555]">読み込み中...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-3 border-secondary border-t-accent"></div>
+          <p className="text-sm text-muted-foreground">読み込み中...</p>
         </div>
       </div>
     </div>
@@ -38,18 +38,18 @@ function LoadingPlaceholder() {
  */
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div className="border rounded-2xl shadow-lg p-5 border-white/20 bg-[#FAFAF8]">
-      <div className="pb-3 border-b border-[#E6E6E4]">
-        <h3 className="text-lg font-semibold text-[#E38B3A]">
+    <div className="border rounded-2xl shadow-lg p-5 border-border bg-card">
+      <div className="pb-3 border-b border-border">
+        <h3 className="text-lg font-semibold text-accent">
           エラーが発生しました
         </h3>
       </div>
       <div className="pt-4">
-        <p className="text-[#555]">{message}</p>
+        <p className="text-muted-foreground">{message}</p>
         <div className="mt-5">
           <a
             href="/report"
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-[#E6E6E4] text-sm bg-white hover:bg-[#F2F2F0] text-[#333] shadow-md transition-all"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-border text-sm bg-card hover:bg-muted text-foreground shadow-md transition-all"
           >
             再読み込み
           </a>
@@ -189,18 +189,18 @@ export default async function ReportPage({ searchParams }: PageProps) {
     return (
       <div className="space-y-6">
         {/* 月切り替えUI */}
-        <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg p-5">
+        <div className="bg-card border border-border rounded-2xl shadow-lg p-5">
           <Suspense fallback={<div className="h-10" />}>
             <MonthSelector currentYearMonth={yearMonth} />
           </Suspense>
         </div>
 
-        {/* メインコンテンツ */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:gap-6">
+        {/* メインコンテンツ: /appと同様に右カラム360px */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
           {/* 左エリア：スコアとグラフ */}
           <section className="grid grid-cols-1 gap-5 lg:gap-6">
             {/* 月次スコア */}
-            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
                 <Suspense fallback={<LoadingPlaceholder />}>
                   <MonthlyScoreCard
@@ -213,7 +213,7 @@ export default async function ReportPage({ searchParams }: PageProps) {
             </div>
 
             {/* ナッツ別棒グラフ */}
-            <div className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
                 <Suspense fallback={<LoadingPlaceholder />}>
                   <NutConsumptionChart
@@ -226,7 +226,7 @@ export default async function ReportPage({ searchParams }: PageProps) {
           </section>
 
           {/* 右エリア：キャラクター */}
-          <aside className="bg-[#FAFAF8] border border-white/20 rounded-2xl shadow-lg overflow-hidden">
+          <aside className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
             <div className="p-5">
               <Suspense fallback={<LoadingPlaceholder />}>
                 <MonthlyCharacter
