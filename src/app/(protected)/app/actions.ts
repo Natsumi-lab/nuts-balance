@@ -17,10 +17,9 @@ import { ActionResult } from '@/lib/types';
  */
 export async function upsertDailyLog(
   date: string,
-  nutIds: Array<number | string> // フロントが string[] の可能性も考慮
+  nutIds: Array<number | string>
 ): Promise<ActionResult> {
   try {
-    // Supabase server client を生成
     const supabase = await createClient();
 
     // -----------------------------
@@ -53,22 +52,26 @@ export async function upsertDailyLog(
     }
 
     // -----------------------------
-    // 3. nutIds を bigint 列に合わせて number に正規化
-    //    nuts.id は小さい数値なので number で安全
+    // 3. nutIds を number に正規化
     // -----------------------------
     const nutIdsNum = nutIds
       .map((v) => (typeof v === 'string' ? Number(v) : v))
       .filter((v) => Number.isFinite(v)) as number[];
 
+    // ✅ 未選択は保存不可
+    if (nutIdsNum.length === 0) {
+      return {
+        success: false,
+        message: 'ナッツを1つ以上選択してください',
+      };
+    }
+
     // -----------------------------
-    // 4. 保存処理は RPC に集約（トランザクションで一括処理）
-    //    - daily_logs upsert
-    //    - daily_log_items 全削除→insert
-    //    - streaks 再計算＆更新
+    // 4. RPC 実行
     // -----------------------------
     const { error: rpcError } = await supabase.rpc('upsert_daily_log', {
       p_log_date: date,
-      p_nut_ids: nutIdsNum, // bigint[] 相当
+      p_nut_ids: nutIdsNum,
     });
 
     if (rpcError) {
@@ -79,9 +82,6 @@ export async function upsertDailyLog(
       };
     }
 
-    // -----------------------------
-    // 8. キャッシュ再検証
-    // -----------------------------
     revalidatePath('/app');
 
     return {
@@ -93,6 +93,43 @@ export async function upsertDailyLog(
     return {
       success: false,
       message: '予期せぬエラーが発生しました',
+    };
+  }
+}
+
+/**
+ * 「今日は食べなかった」ボタン用 Server Action
+ *
+ * - DBには何も保存しない
+ * - ストリークは自然に切れる（daily_logs が存在しないため）
+ */
+export async function skipToday(date: string): Promise<ActionResult> {
+  try {
+    // 必要なら認証確認だけ入れてもOK（必須ではない）
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'ログインが必要です',
+      };
+    }
+
+    // DB操作は行わない
+    revalidatePath('/app');
+
+    return {
+      success: true,
+      message: '今日は🥜食べませんでした',
+    };
+  } catch (error) {
+    console.error('Skip error:', error);
+    return {
+      success: false,
+      message: 'スキップ処理中にエラーが発生しました',
     };
   }
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Nut, ActionResult } from "@/lib/types";
-import { upsertDailyLog } from "../actions";
+import { upsertDailyLog, skipToday } from "../actions";
 
 /**
  * ナッツチェックリストコンポーネントのプロパティ型
@@ -226,7 +226,7 @@ export default function NutCheckList({
         </div>
       </div>
 
-      {/* ✅ ナッツ：縦2×横3（= 横3列） */}
+      {/* ✅ ナッツ：縦2×横3 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {nuts.map((nut) => {
           const nutId = nut.id;
@@ -240,13 +240,9 @@ export default function NutCheckList({
               key={String(nutId)}
               className={[
                 "rounded-2xl cursor-pointer border p-3",
-                // 動きの土台
                 "transition-all duration-200 ease-out will-change-transform",
-                // ホバー
                 "hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(0,0,0,0.12)] hover:ring-1 hover:ring-black/5",
-                // クリック時
                 "active:translate-y-0 active:shadow-[0_10px_18px_rgba(0,0,0,0.10)]",
-
                 checked
                   ? [
                       "bg-[#E6F1EC]/60 border-[#9FBFAF]/30",
@@ -254,7 +250,6 @@ export default function NutCheckList({
                       "hover:shadow-[0_20px_44px_rgba(0,0,0,0.14)]",
                     ].join(" ")
                   : "bg-white hover:bg-[#FAFAFA] border-[#E6E6E4]/70",
-
                 isPending
                   ? "opacity-70 cursor-not-allowed pointer-events-none"
                   : "",
@@ -279,10 +274,8 @@ export default function NutCheckList({
                       "shadow-[0_2px_0_rgba(0,0,0,0.12)]",
                       "ring-1 ring-white/60",
                       "hover:scale-110 hover:-translate-y-0.5 hover:shadow-[0_6px_12px_rgba(0,0,0,0.14)]",
-                      // checked
                       "peer-checked:bg-[#F4B24E] peer-checked:border-[#E9A73F]",
                       "peer-checked:shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_2px_0_rgba(0,0,0,0.12)]",
-                      // focus：アクセシビリティ
                       "peer-focus-visible:ring-2 peer-focus-visible:ring-[#F9D977]/70 peer-focus-visible:ring-offset-2",
                     ].join(" ")}
                   />
@@ -328,7 +321,6 @@ export default function NutCheckList({
                     {nut.name}
                   </h3>
 
-                  {/* タグ1個表示 */}
                   <div className="mt-1">
                     <span
                       className={[
@@ -349,38 +341,56 @@ export default function NutCheckList({
       </div>
 
       {/* 保存ボタン + 結果表示 */}
-      <div className="mt-6">
-        <button
-          onClick={saveSelection}
-          disabled={isPending}
-          className={[
-            "w-full rounded-2xl px-6 py-3.5 text-white font-semibold",
-            "bg-gradient-to-b from-[#FBE38E] via-[#F4B24E] to-[#E98A3F]",
-            "shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_0_rgba(0,0,0,0.08),0_18px_32px_rgba(0,0,0,0.08)]",
-            "ring-1 ring-white/35",
-            "transition-all duration-200 ease-out",
+      <div className="mt-6 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          {/* 左：今日は食べなかった */}
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await skipToday(date);
+              setResult(res);
+              router.refresh();
+            }}
+            disabled={isPending}
+            className={[
+              "rounded-2xl px-4 py-3 font-semibold",
+              "bg-white border border-[#E6E6E4] text-[#333]",
+              "shadow-sm transition-all duration-200 ease-out",
+              "hover:-translate-y-1 hover:shadow-md",
+              "active:translate-y-0 active:shadow-sm",
+              "disabled:opacity-60 disabled:cursor-not-allowed",
+            ].join(" ")}
+          >
+            今日は食べなかった
+          </button>
 
-            //  hover
-            "hover:-translate-y-2 hover:scale-[1.02]",
-            "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_14px_0_rgba(0,0,0,0.12),0_32px_56px_rgba(0,0,0,0.14)]",
+          {/* 右：保存 */}
+          <button
+            onClick={saveSelection}
+            disabled={isPending || selected.length === 0}
+            className={[
+              "rounded-2xl px-4 py-3 font-semibold text-white",
+              "bg-gradient-to-b from-[#FBE38E] via-[#F4B24E] to-[#E98A3F]",
+              "shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_0_rgba(0,0,0,0.08),0_14px_24px_rgba(0,0,0,0.10)]",
+              "ring-1 ring-white/35",
+              "transition-all duration-200 ease-out",
+              "hover:-translate-y-1 hover:scale-[1.02]",
+              "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_12px_0_rgba(0,0,0,0.12),0_24px_40px_rgba(0,0,0,0.14)]",
+              "active:translate-y-1 active:scale-[0.99]",
+              "active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.18),0_4px_0_rgba(0,0,0,0.18),0_10px_18px_rgba(0,0,0,0.14)]",
+              "disabled:from-[#B9B9B9] disabled:via-[#AFAFAF] disabled:to-[#9B9B9B]",
+              "disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:cursor-not-allowed",
+            ].join(" ")}
+          >
+            {isPending ? "保存中..." : "保存する"}
+          </button>
+        </div>
 
-            //  active：押し込み
-            "active:translate-y-2 active:scale-[0.99]",
-            "active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.18),0_4px_0_rgba(0,0,0,0.18),0_10px_18px_rgba(0,0,0,0.14)]",
-
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9D977]/70 focus-visible:ring-offset-2",
-
-            "disabled:from-[#B9B9B9] disabled:via-[#AFAFAF] disabled:to-[#9B9B9B]",
-            "disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:cursor-not-allowed",
-          ].join(" ")}
-        >
-          {isPending ? "保存中..." : "保存する"}
-        </button>
-
-        {result ? (
+        {/* 結果表示 */}
+        {result && (
           <div
             className={[
-              "mt-3 p-3 rounded-xl text-sm shadow-sm border",
+              "p-3 rounded-xl text-sm shadow-sm border text-center",
               result.success
                 ? "bg-[#E6F1EC]/40 text-[#5E8F76] border-[#9FBFAF]/30"
                 : "bg-[#FEE]/40 text-[#C53030] border-[#FEE]/80",
@@ -388,7 +398,7 @@ export default function NutCheckList({
           >
             {result.message}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
