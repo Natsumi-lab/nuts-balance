@@ -106,6 +106,7 @@ async function fetchDailyData(date: string): Promise<{
   monthStreak: number;
   monthRecordDays: number;
   recordedDates: string[];
+  skippedDates: string[];
 }> {
   const supabase = await createClient();
 
@@ -153,12 +154,19 @@ async function fetchDailyData(date: string): Promise<{
   const monthRecordDays = monthLogDates.length;
   const monthStreak = calcMonthlyStreak(monthLogDates, date);
 
-  //  カレンダー用：記録がある日付一覧
+  //  カレンダー用：記録がある日付一覧（摂取日）
   const { data: recordedLogs, error: recordedLogsError } = await supabase
     .from("daily_logs")
     .select("log_date");
 
   if (recordedLogsError) throw new Error("記録日付一覧の取得に失敗しました");
+
+  // ✅ カレンダー用：スキップ日一覧
+  const { data: skippedLogs, error: skippedLogsError } = await supabase
+    .from("daily_skips")
+    .select("log_date");
+
+  if (skippedLogsError) throw new Error("スキップ日付一覧の取得に失敗しました");
 
   return {
     nuts: nuts as Nut[],
@@ -168,7 +176,8 @@ async function fetchDailyData(date: string): Promise<{
     },
     monthStreak,
     monthRecordDays,
-    recordedDates: recordedLogs.map((log) => log.log_date),
+    recordedDates: (recordedLogs ?? []).map((log) => log.log_date),
+    skippedDates: (skippedLogs ?? []).map((log) => log.log_date),
   };
 }
 
@@ -186,8 +195,14 @@ export default async function Page({ searchParams }: PageProps) {
   if (!date) return <DateInitializer />;
 
   try {
-    const { nuts, dailyLogData, monthStreak, monthRecordDays, recordedDates } =
-      await fetchDailyData(date);
+    const {
+      nuts,
+      dailyLogData,
+      monthStreak,
+      monthRecordDays,
+      recordedDates,
+      skippedDates,
+    } = await fetchDailyData(date);
 
     const savedSelectedIds = dailyLogData.selectedNutIds
       .map((v) => Number(v))
@@ -226,6 +241,7 @@ export default async function Page({ searchParams }: PageProps) {
                 <CalendarPicker
                   selectedDate={date}
                   recordedDates={recordedDates}
+                  skippedDates={skippedDates}
                 />
               </div>
             </div>

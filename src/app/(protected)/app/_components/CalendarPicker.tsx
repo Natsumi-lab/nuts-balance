@@ -7,10 +7,15 @@ import { ja } from "date-fns/locale";
 
 type Props = {
   selectedDate: string; // YYYY-MM-DD（選択中の日付）
-  recordedDates: string[]; // 記録がある日（YYYY-MM-DD配列）
+  recordedDates: string[]; // 摂取記録がある日（YYYY-MM-DD配列）
+  skippedDates: string[]; // スキップ日（YYYY-MM-DD配列）
 };
 
-export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
+export default function CalendarPicker({
+  selectedDate,
+  recordedDates,
+  skippedDates,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,6 +26,8 @@ export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
   const recordedDateObjects = recordedDates.map(
     (d) => new Date(d + "T00:00:00"),
   );
+
+  const skippedDateObjects = skippedDates.map((d) => new Date(d + "T00:00:00"));
 
   /**
    * 日付クリック時に URL の query を更新して、表示日を切り替える
@@ -55,14 +62,14 @@ export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
 
         .nb-calendar .rdp-month {
           width: 100%;
-          margin: 0; /* 中央寄せの余白を消す */
+          margin: 0;
         }
 
         .nb-calendar .rdp-table {
           width: 100%;
-          table-layout: fixed; /* 列幅を均等化して右余白を減らす */
+          table-layout: fixed;
           border-collapse: separate;
-          border-spacing: 0; /* 不要な隙間を削除 */
+          border-spacing: 0;
         }
 
         .nb-calendar .rdp-row {
@@ -103,12 +110,12 @@ export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
            日付ボタン（ベース）
            ---------------------------- */
         .nb-calendar .rdp-day {
-          width: 2.45rem; /* ← 2.5rem → 2.35rem */
-          height: 2.45rem; /* ← 2.5rem → 2.35rem */
+          width: 2.45rem;
+          height: 2.45rem;
           border-radius: 9999px;
           font-weight: 700;
           color: #3b2f2a;
-          position: relative; /* 疑似要素で内側ハイライトを描くため */
+          position: relative;
           transition:
             transform 160ms ease,
             box-shadow 160ms ease,
@@ -138,18 +145,16 @@ export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
           grid-template-columns: repeat(7, minmax(0, 1fr));
         }
 
-        /* 各セルをgridに合わせて伸ばす */
         .nb-calendar .rdp-head_cell,
         .nb-calendar .rdp-cell {
           width: 100%;
         }
 
-        /* 日付ボタンをセルの中央に置く（セルは伸びるがボタンは一定サイズ） */
         .nb-calendar .rdp-day {
           margin: 0 auto;
         }
 
-        /* ✅ 選択日 */
+        /*  選択日 */
         .nb-calendar .rdp-day[aria-selected="true"] {
           color: #fff !important;
           background: linear-gradient(
@@ -160,27 +165,52 @@ export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
           box-shadow: 0 14px 24px rgba(96, 165, 250, 0.25) !important;
         }
 
-        /* ✅ 今日 */
+        /*  今日 */
         .nb-calendar .rdp-day_today:not([aria-selected="true"]) {
           background: rgba(250, 250, 248, 0.92) !important;
           box-shadow: inset 0 0 0 2px rgba(159, 191, 175, 0.9);
         }
 
-        /* ✅ 記録がある日 */
+        /*  記録がある日（摂取日） */
         .nb-calendar .rdp-day_recorded:not([aria-selected="true"])::after {
           content: "";
           position: absolute;
-          inset: 0.28rem; /* 内側に縮める → 周囲の丸と重ならない */
+          inset: 0.28rem;
+          border-radius: 9999px;
+          background: rgba(147, 197, 253, 0.35);
+          box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
+          pointer-events: none;
+        }
+
+        /*  スキップ日（グレー表示） */
+        .nb-calendar .rdp-day_skipped:not([aria-selected="true"]) {
+          color: rgba(59, 47, 42, 0.45) !important; /* 文字を薄く */
+        }
+
+        .nb-calendar .rdp-day_skipped:not([aria-selected="true"])::after {
+          content: "";
+          position: absolute;
+          inset: 0.28rem;
           border-radius: 9999px;
 
-          /* 薄い水色（選択日の水色を薄めたトーン） */
-          background: rgba(147, 197, 253, 0.35);
+          /* グレーの薄塗り */
+          background: rgba(0, 0, 0, 0.06);
 
-          /* ほんのり輪郭（薄く） */
-          box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
+          /* 薄い枠 */
+          box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 
-          /* クリック可能領域を邪魔しない */
           pointer-events: none;
+        }
+
+        /*  万が一 recorded と skipped が両方付いたら recorded を優先 */
+        .nb-calendar
+          .rdp-day_recorded.rdp-day_skipped:not([aria-selected="true"]) {
+          color: #3b2f2a !important;
+        }
+        .nb-calendar
+          .rdp-day_recorded.rdp-day_skipped:not([aria-selected="true"])::after {
+          background: rgba(147, 197, 253, 0.35);
+          box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
         }
       `}</style>
 
@@ -191,13 +221,13 @@ export default function CalendarPicker({ selectedDate, recordedDates }: Props) {
         weekStartsOn={1}
         disabled={{ after: new Date() }}
         locale={ja}
-        /* 記録日マーカー：Date[] を渡す */
         modifiers={{
           recorded: recordedDateObjects,
+          skipped: skippedDateObjects,
         }}
-        /* modifiers で付与されるクラス名を、こちらのクラスにマップ */
         modifiersClassNames={{
           recorded: "rdp-day_recorded",
+          skipped: "rdp-day_skipped",
         }}
       />
     </div>
