@@ -13,7 +13,7 @@ import {
 interface CharacterStreakProps {
   streak: number; // 今月の連続記録日数
   recordDays: number; // 今月の記録日数
-  baseDate: string; // YYYY-MM-DD（表示中の日付）
+  baseDate: string; // YYYY-MM-DD
 }
 
 function parseYmd(date: string): Date {
@@ -156,7 +156,7 @@ export default function CharacterStreak({
   const fromSrc = getCharacterImageSrc(characterId, fromStage);
   const toSrc = getCharacterImageSrc(characterId, toStage);
 
-  // A) 2枚重ねのクロスフェード
+  // 2枚重ねのクロスフェード
   const fromOpacity = phase === "holdOld" ? 1 : 0;
   const toOpacity = phase === "holdOld" ? 0 : 1;
 
@@ -170,7 +170,7 @@ export default function CharacterStreak({
           className={`
             relative w-full max-w-[280px] aspect-[3/4]
             bg-gradient-to-b ${bgGradient}
-            rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden
+            rounded-2xl shadow-sm border border-border overflow-hidden
             transition-all duration-500
           `}
         >
@@ -283,12 +283,12 @@ export default function CharacterStreak({
           </div>
 
           <div className="mt-1 text-center leading-tight">
-            <div className="text-xs font-medium text-[#555]">
+            <div className="text-xs font-medium text-muted-foreground">
               記録を増やして、キャラを育てよう
             </div>
-            <div className="mt-1 text-[11px] text-[#777]">
+            <div className="mt-1 text-[11px] text-muted-foreground">
               今月の成長カウント（記録）：
-              <span className="ml-1 font-semibold text-[#333]">
+              <span className="ml-1 font-semibold text-card-foreground">
                 {recordDays}
               </span>
               日

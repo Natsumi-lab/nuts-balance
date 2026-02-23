@@ -19,10 +19,8 @@ export default function CalendarPicker({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // react-day-picker は Date を前提にしているので、文字列を Date に変換
   const selected = new Date(selectedDate);
 
-  // YYYY-MM-DD → Date（タイムゾーン差異で日付ズレしないように 00:00 を明示）
   const recordedDateObjects = recordedDates.map(
     (d) => new Date(d + "T00:00:00"),
   );
@@ -47,7 +45,7 @@ export default function CalendarPicker({
   };
 
   return (
-    <div className="nb-calendar rounded-2xl border border-[#E6E6E4] bg-white/75 px-4 py-3 shadow-lg ring-1 ring-black/5">
+    <div className="nb-calendar rounded-2xl border border-border bg-card/75 px-4 py-3 shadow-lg ring-1 ring-black/5 dark:ring-white/5">
       <style jsx global>{`
         /* =========================================================
            Nuts Balance Calendar (react-day-picker)
@@ -84,15 +82,15 @@ export default function CalendarPicker({
           margin-bottom: 0.6rem;
           padding: 0.55rem 0.75rem;
           border-radius: 1rem;
-          background: rgba(250, 250, 248, 0.85);
+          background: hsl(var(--muted) / 0.85);
           box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
-          border: 1px solid rgba(0, 0, 0, 0.05);
+          border: 1px solid hsl(var(--border) / 0.5);
         }
 
         .nb-calendar .rdp-caption_label {
           font-weight: 800;
           letter-spacing: 0.02em;
-          color: #2f5d4a;
+          color: hsl(var(--primary));
           font-size: 0.95rem;
         }
 
@@ -100,7 +98,7 @@ export default function CalendarPicker({
            曜日ラベル
            ---------------------------- */
         .nb-calendar .rdp-head_cell {
-          color: #6b7f75;
+          color: hsl(var(--muted-foreground));
           font-weight: 800;
           font-size: 0.75rem;
           padding-bottom: 0.25rem;
@@ -114,7 +112,7 @@ export default function CalendarPicker({
           height: 2.45rem;
           border-radius: 9999px;
           font-weight: 700;
-          color: #3b2f2a;
+          color: hsl(var(--card-foreground));
           position: relative;
           transition:
             transform 160ms ease,
@@ -123,7 +121,7 @@ export default function CalendarPicker({
         }
 
         .nb-calendar .rdp-day:hover {
-          background: rgba(230, 241, 236, 0.9);
+          background: hsl(var(--secondary) / 0.5);
           box-shadow: 0 12px 18px rgba(0, 0, 0, 0.06);
           transform: translateY(-1px);
         }
@@ -167,8 +165,8 @@ export default function CalendarPicker({
 
         /*  今日 */
         .nb-calendar .rdp-day_today:not([aria-selected="true"]) {
-          background: rgba(250, 250, 248, 0.92) !important;
-          box-shadow: inset 0 0 0 2px rgba(159, 191, 175, 0.9);
+          background: hsl(var(--muted) / 0.92) !important;
+          box-shadow: inset 0 0 0 2px hsl(var(--secondary) / 0.9);
         }
 
         /*  記録がある日（摂取日） */
@@ -184,7 +182,7 @@ export default function CalendarPicker({
 
         /*  スキップ日（グレー表示） */
         .nb-calendar .rdp-day_skipped:not([aria-selected="true"]) {
-          color: rgba(59, 47, 42, 0.45) !important; /* 文字を薄く */
+          color: hsl(var(--muted-foreground) / 0.6) !important;
         }
 
         .nb-calendar .rdp-day_skipped:not([aria-selected="true"])::after {
@@ -194,10 +192,10 @@ export default function CalendarPicker({
           border-radius: 9999px;
 
           /* グレーの薄塗り */
-          background: rgba(0, 0, 0, 0.06);
+          background: hsl(var(--muted) / 0.5);
 
           /* 薄い枠 */
-          box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+          box-shadow: inset 0 0 0 1px hsl(var(--border) / 0.5);
 
           pointer-events: none;
         }
@@ -205,7 +203,7 @@ export default function CalendarPicker({
         /*  万が一 recorded と skipped が両方付いたら recorded を優先 */
         .nb-calendar
           .rdp-day_recorded.rdp-day_skipped:not([aria-selected="true"]) {
-          color: #3b2f2a !important;
+          color: hsl(var(--card-foreground)) !important;
         }
         .nb-calendar
           .rdp-day_recorded.rdp-day_skipped:not([aria-selected="true"])::after {

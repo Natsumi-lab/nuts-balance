@@ -58,7 +58,7 @@ export default function TodayScore({
   return (
     <div
       className={[
-        "rounded-2xl border border-[#E6E6E4] bg-white shadow-sm",
+        "rounded-2xl border border-border bg-card shadow-sm",
         "transition-all duration-300 ease-out",
         isSaved
           ? animateIn
@@ -70,13 +70,13 @@ export default function TodayScore({
       <div className="p-5">
         {/* 見出し「M/D（W）のスコア」 */}
         <div className="text-center">
-          <div className="text-xl font-semibold text-[#2F3A34]">
+          <div className="text-xl font-semibold text-card-foreground">
             {dateLabel ? `${dateLabel} のスコア` : "今日のスコア"}
           </div>
         </div>
 
         {!isSaved ? (
-          <div className="mt-4 rounded-xl bg-[#F6F7F6] px-3 py-3 text-sm text-[#2F3A34] text-center">
+          <div className="mt-4 rounded-xl bg-muted px-3 py-3 text-sm text-card-foreground text-center">
             {emptyMessage}
           </div>
         ) : (
@@ -88,7 +88,7 @@ export default function TodayScore({
                     key={r.key}
                     className="flex items-center gap-2 text-left"
                   >
-                    <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-[#333]">
+                    <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-card-foreground">
                       {r.label}
                     </div>
                     <ScoreStars value={r.value} />
@@ -99,8 +99,8 @@ export default function TodayScore({
 
             {/* コメント */}
             {comment ? (
-              <div className="mt-4 rounded-xl bg-[#F6F7F6] px-3 py-2 text-sm text-[#2F3A34]">
-                <div className="text-xs font-semibold text-[#6B7F75]">
+              <div className="mt-4 rounded-xl bg-muted px-3 py-2 text-sm text-card-foreground">
+                <div className="text-xs font-semibold text-muted-foreground">
                   コメント
                 </div>
                 <div className="mt-1">{comment}</div>

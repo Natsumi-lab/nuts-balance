@@ -62,7 +62,7 @@ function getTopTag(nut: Nut): string {
 }
 
 /**
- * JST の YYYY-MM-DD を返す（未来日判定をJSTで統一）
+ * JST の YYYY-MM-DD を返す
  */
 function getJstTodayYmd(): string {
   const now = Date.now();
@@ -124,7 +124,7 @@ export default function NutCheckList({
     setSelected(initialSelected);
   }, [initialSelected, date]);
 
-  //  日付が変わったら結果表示は消す（残り続ける問題の解消）
+  //  日付が変わったら結果表示は消す
   useEffect(() => {
     setResult(null);
     if (hideTimerRef.current) {
@@ -233,7 +233,7 @@ export default function NutCheckList({
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm">
+    <div className="bg-card p-5 rounded-xl shadow-sm">
       {/*  ヘッダー：中央に日付 + 左右に前日/翌日 */}
       <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex justify-start">
@@ -243,8 +243,8 @@ export default function NutCheckList({
             disabled={isPending}
             className={[
               "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-              "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
-              "hover:bg-white hover:shadow-md transition-all",
+              "border border-border bg-[#FAFAF8] dark:bg-muted text-[#2F5D4A] dark:text-card-foreground shadow-sm",
+              "hover:bg-white dark:hover:bg-card hover:shadow-md transition-all",
               isPending ? "opacity-60 cursor-not-allowed" : "",
             ].join(" ")}
             aria-label="前日へ"
@@ -254,7 +254,7 @@ export default function NutCheckList({
         </div>
 
         <div className="text-center">
-          <div className="text-xl font-bold text-[#2F3A34] leading-tight">
+          <div className="text-xl font-bold text-card-foreground leading-tight">
             {formatJaLabel(date)}の記録
           </div>
         </div>
@@ -266,8 +266,8 @@ export default function NutCheckList({
             disabled={isPending || isNextDisabled}
             className={[
               "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-              "border border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A] shadow-sm",
-              "hover:bg-white hover:shadow-md transition-all",
+              "border border-border bg-[#FAFAF8] dark:bg-muted text-[#2F5D4A] dark:text-card-foreground shadow-sm",
+              "hover:bg-white dark:hover:bg-card hover:shadow-md transition-all",
               isPending || isNextDisabled
                 ? "opacity-60 cursor-not-allowed"
                 : "",
@@ -294,15 +294,15 @@ export default function NutCheckList({
               className={[
                 "rounded-2xl cursor-pointer border p-3",
                 "transition-all duration-200 ease-out will-change-transform",
-                "hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(0,0,0,0.12)] hover:ring-1 hover:ring-black/5",
+                "hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(0,0,0,0.12)] hover:ring-1 hover:ring-black/5 dark:hover:ring-white/10",
                 "active:translate-y-0 active:shadow-[0_10px_18px_rgba(0,0,0,0.10)]",
                 checked
                   ? [
-                      "bg-[#E6F1EC]/60 border-[#9FBFAF]/30",
+                      "bg-secondary/40 border-secondary/50",
                       "shadow-[0_10px_18px_rgba(0,0,0,0.08)]",
                       "hover:shadow-[0_20px_44px_rgba(0,0,0,0.14)]",
                     ].join(" ")
-                  : "bg-white hover:bg-[#FAFAFA] border-[#E6E6E4]/70",
+                  : "bg-card hover:bg-muted border-border/70",
                 isPending
                   ? "opacity-70 cursor-not-allowed pointer-events-none"
                   : "",
@@ -323,13 +323,13 @@ export default function NutCheckList({
                   <div
                     className={[
                       "w-6 h-6 rounded-md border-2 transition-all duration-200",
-                      "bg-white border-[#9FBFAF]",
+                      "bg-card border-secondary",
                       "shadow-[0_2px_0_rgba(0,0,0,0.12)]",
-                      "ring-1 ring-white/60",
+                      "ring-1 ring-card/60",
                       "hover:scale-110 hover:-translate-y-0.5 hover:shadow-[0_6px_12px_rgba(0,0,0,0.14)]",
-                      "peer-checked:bg-[#F4B24E] peer-checked:border-[#E9A73F]",
+                      "peer-checked:bg-accent peer-checked:border-accent",
                       "peer-checked:shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_2px_0_rgba(0,0,0,0.12)]",
-                      "peer-focus-visible:ring-2 peer-focus-visible:ring-[#F9D977]/70 peer-focus-visible:ring-offset-2",
+                      "peer-focus-visible:ring-2 peer-focus-visible:ring-ring/70 peer-focus-visible:ring-offset-2",
                     ].join(" ")}
                   />
 
@@ -353,7 +353,7 @@ export default function NutCheckList({
 
                 {/* miniアイコン */}
                 {miniSrc ? (
-                  <div className="relative w-14 h-14 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm border border-[#E6E6E4]/80">
+                  <div className="relative w-14 h-14 shrink-0 overflow-hidden rounded-2xl bg-card shadow-sm border border-border/80">
                     <Image
                       src={miniSrc}
                       alt={nut.name}
@@ -363,14 +363,16 @@ export default function NutCheckList({
                     />
                   </div>
                 ) : (
-                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-[#F8F8F6] border border-[#E6E6E4]/80 flex items-center justify-center">
-                    <span className="text-[10px] text-[#999]">no img</span>
+                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-muted border border-border/80 flex items-center justify-center">
+                    <span className="text-[10px] text-muted-foreground">
+                      no img
+                    </span>
                   </div>
                 )}
 
                 {/* テキスト */}
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-[#333] leading-5 text-sm">
+                  <h3 className="font-semibold text-card-foreground leading-5 text-sm">
                     {nut.name}
                   </h3>
 
@@ -379,8 +381,8 @@ export default function NutCheckList({
                       className={[
                         "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
                         checked
-                          ? "border-[#9FBFAF]/40 bg-[#E6F1EC]/60 text-[#2F5D4A]"
-                          : "border-[#E6E6E4] bg-[#FAFAF8] text-[#2F5D4A]",
+                          ? "border-secondary/40 bg-secondary/40 text-[#2F5D4A] dark:text-card-foreground"
+                          : "border-border bg-[#FAFAF8] dark:bg-muted text-[#2F5D4A] dark:text-card-foreground",
                       ].join(" ")}
                     >
                       {getTopTag(nut)}
@@ -416,7 +418,7 @@ export default function NutCheckList({
                     "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(0,0,0,0.14)]",
                   ].join(" ")
                 : [
-                    "bg-white border border-[#E6E6E4] text-[#333]",
+                    "bg-card border border-border text-card-foreground",
                     "shadow-sm hover:shadow-md",
                   ].join(" "),
             ].join(" ")}
@@ -452,8 +454,8 @@ export default function NutCheckList({
             className={[
               "p-3 rounded-xl text-sm shadow-sm border text-center",
               result.success
-                ? "bg-[#E6F1EC]/40 text-[#5E8F76] border-[#9FBFAF]/30"
-                : "bg-[#FEE]/40 text-[#C53030] border-[#FEE]/80",
+                ? "bg-secondary/30 text-primary border-secondary/40"
+                : "bg-red-100/40 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200/80 dark:border-red-800/50",
             ].join(" ")}
           >
             {result.message}
