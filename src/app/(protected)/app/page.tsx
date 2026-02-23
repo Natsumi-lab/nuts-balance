@@ -70,10 +70,15 @@ function formatYmd(date: Date): string {
 
 /** 今月範囲（開始:月初、終了:翌月初） */
 function getMonthRangeYmd(baseYmd: string) {
-  const base = parseYmd(baseYmd);
-  const start = new Date(base.getFullYear(), base.getMonth(), 1);
-  const nextStart = new Date(base.getFullYear(), base.getMonth() + 1, 1);
-  return { startYmd: formatYmd(start), nextStartYmd: formatYmd(nextStart) };
+  const [y, m] = baseYmd.split("-").map(Number);
+
+  const startYmd = `${y}-${String(m).padStart(2, "0")}-01`;
+
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const nextStartYmd = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+
+  return { startYmd, nextStartYmd };
 }
 
 /**
@@ -106,6 +111,7 @@ async function fetchDailyData(date: string): Promise<{
   monthStreak: number;
   monthRecordDays: number;
   recordedDates: string[];
+  skippedDates: string[];
 }> {
   const supabase = await createClient();
 
@@ -153,12 +159,19 @@ async function fetchDailyData(date: string): Promise<{
   const monthRecordDays = monthLogDates.length;
   const monthStreak = calcMonthlyStreak(monthLogDates, date);
 
-  //  カレンダー用：記録がある日付一覧
+  //  カレンダー用：記録がある日付一覧（摂取日）
   const { data: recordedLogs, error: recordedLogsError } = await supabase
     .from("daily_logs")
     .select("log_date");
 
   if (recordedLogsError) throw new Error("記録日付一覧の取得に失敗しました");
+
+  // ✅ カレンダー用：スキップ日一覧
+  const { data: skippedLogs, error: skippedLogsError } = await supabase
+    .from("daily_skips")
+    .select("log_date");
+
+  if (skippedLogsError) throw new Error("スキップ日付一覧の取得に失敗しました");
 
   return {
     nuts: nuts as Nut[],
@@ -168,7 +181,8 @@ async function fetchDailyData(date: string): Promise<{
     },
     monthStreak,
     monthRecordDays,
-    recordedDates: recordedLogs.map((log) => log.log_date),
+    recordedDates: (recordedLogs ?? []).map((log) => log.log_date),
+    skippedDates: (skippedLogs ?? []).map((log) => log.log_date),
   };
 }
 
@@ -186,8 +200,14 @@ export default async function Page({ searchParams }: PageProps) {
   if (!date) return <DateInitializer />;
 
   try {
-    const { nuts, dailyLogData, monthStreak, monthRecordDays, recordedDates } =
-      await fetchDailyData(date);
+    const {
+      nuts,
+      dailyLogData,
+      monthStreak,
+      monthRecordDays,
+      recordedDates,
+      skippedDates,
+    } = await fetchDailyData(date);
 
     const savedSelectedIds = dailyLogData.selectedNutIds
       .map((v) => Number(v))
@@ -204,6 +224,7 @@ export default async function Page({ searchParams }: PageProps) {
       : undefined;
 
     const dateLabel = formatJaLabel(date);
+    const isSkipped = skippedDates.includes(date);
 
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
@@ -215,6 +236,7 @@ export default async function Page({ searchParams }: PageProps) {
                   nuts={nuts}
                   selectedNutIds={dailyLogData.selectedNutIds}
                   date={date}
+                  isSkipped={isSkipped}
                 />
               </Suspense>
             </div>
@@ -226,6 +248,7 @@ export default async function Page({ searchParams }: PageProps) {
                 <CalendarPicker
                   selectedDate={date}
                   recordedDates={recordedDates}
+                  skippedDates={skippedDates}
                 />
               </div>
             </div>
