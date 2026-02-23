@@ -6,6 +6,7 @@ import {
   getGrowthProgress,
   getCharacterIdByMonth,
   getCharacterImageSrc,
+  type GrowthStage,
 } from "@/lib/domain/growth";
 
 type MonthlyCharacterProps = {
@@ -17,6 +18,20 @@ type MonthlyCharacterProps = {
   maxStreak: number;
 };
 
+/**
+ * ステージに応じた背景グラデーションを返す
+ */
+function getStageBackground(stage: GrowthStage): string {
+  const backgrounds: Record<GrowthStage, string> = {
+    1: "from-[#F8F7F5] via-[#F5F4F2] to-[#EFEEEC]",
+    2: "from-[#F5F9F7] via-[#EFF5F2] to-[#E8F0EB]",
+    3: "from-[#F2F8F5] via-[#E8F3ED] to-[#DEF0E6]",
+    4: "from-[#EEF7F3] via-[#E2F2E9] to-[#D4ECDF]",
+    5: "from-[#E8F5EF] via-[#D8EDE3] to-[#C8E6D6]",
+  };
+  return backgrounds[stage];
+}
+
 export default function MonthlyCharacter({
   recordDays,
   month,
@@ -25,28 +40,67 @@ export default function MonthlyCharacter({
   const { stage, isMaxStage, remainingDays, progressPct, nextThreshold } =
     getGrowthProgress(recordDays);
 
-  // キャラ切り替え（偶数月 → wl、奇数月 → al）
   const characterId = getCharacterIdByMonth(month);
-
-  // キャラ画像パス
   const imageSrc = getCharacterImageSrc(characterId, stage);
+
+  const bgGradient = getStageBackground(stage);
+
   return (
     <div className="px-4 py-4">
       <div className="flex flex-col items-center gap-4">
-        {/* キャラクター画像エリア */}
-        <div className="relative w-full max-w-[280px] aspect-[3/4] bg-gradient-to-b from-[#FDFDFB] to-[#F8F8F6] rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden">
+        {/* キャラクター表示エリア */}
+        <div
+          className={`
+            relative w-full max-w-[280px] aspect-[3/4]
+            bg-gradient-to-b ${bgGradient}
+            rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden
+            transition-all duration-500
+          `}
+        >
+          {/* ビネット */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(120% 95% at 50% 40%, rgba(255,255,255,0.0) 0%, rgba(0,0,0,0.05) 62%, rgba(0,0,0,0.12) 100%)",
+            }}
+          />
+
+          {/* キャラクター画像 */}
           <div className="absolute inset-0 p-4">
-            <div className="relative w-full h-full animate-float">
-              <Image
-                src={imageSrc}
-                alt="ナッツキャラクター"
-                fill
-                sizes="(max-width: 768px) 70vw, 280px"
-                className="object-contain drop-shadow-sm"
-                priority
+            <div className="relative w-full h-full">
+              {/* 接地影 */}
+              <div
+                className={`
+                  absolute left-1/2 bottom-[14%] -translate-x-1/2
+                  w-[62%] h-[10%]
+                  rounded-full
+                  blur-[14px]
+                  bg-black/15
+                  opacity-60
+                `}
               />
+
+              <div className="absolute inset-0 animate-character-breathe">
+                <Image
+                  src={imageSrc}
+                  alt="ナッツキャラクター"
+                  fill
+                  sizes="(max-width: 768px) 70vw, 280px"
+                  className="object-contain drop-shadow-md"
+                  priority
+                />
+              </div>
             </div>
           </div>
+
+          {/* ステージ背景のノイズ */}
+          <div
+            className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+            }}
+          />
         </div>
 
         {/* 成長メーター */}
@@ -57,11 +111,10 @@ export default function MonthlyCharacter({
               return (
                 <span
                   key={index}
-                  className={`transition-all duration-300 ${
-                    filled
-                      ? "opacity-100 scale-100"
-                      : "opacity-25 scale-90 grayscale"
-                  }`}
+                  className={`
+                    transition-all duration-300
+                    ${filled ? "opacity-100 scale-100" : "opacity-25 scale-90 grayscale"}
+                  `}
                 >
                   {icon}
                 </span>
