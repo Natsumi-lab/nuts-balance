@@ -1,26 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+/**
+ * JST基準で YYYY-MM-DD を取得
+ */
+function getJstTodayYmd(): string {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 /**
  * 日付初期化コンポーネント
- * URLクエリに日付がない場合、現在の日付を設定して遷移
+ * URLクエリに日付がない場合、JST現在日付で遷移
  */
 export default function DateInitializer() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // URLから日付を取得
-    const dateParam = searchParams.get('date');
+    const dateParam = searchParams.get("date");
 
-    // 日付がない場合は、現在のローカル日付で補完
     if (!dateParam) {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
-      router.replace(`/app?date=${today}`);
+      const todayJst = getJstTodayYmd();
+      router.replace(`/app?date=${todayJst}`);
     }
   }, [router, searchParams]);
 
-  return null; // このコンポーネントはUIをレンダリングしない
+  return null;
 }

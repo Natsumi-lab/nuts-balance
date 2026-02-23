@@ -70,10 +70,15 @@ function formatYmd(date: Date): string {
 
 /** 今月範囲（開始:月初、終了:翌月初） */
 function getMonthRangeYmd(baseYmd: string) {
-  const base = parseYmd(baseYmd);
-  const start = new Date(base.getFullYear(), base.getMonth(), 1);
-  const nextStart = new Date(base.getFullYear(), base.getMonth() + 1, 1);
-  return { startYmd: formatYmd(start), nextStartYmd: formatYmd(nextStart) };
+  const [y, m] = baseYmd.split("-").map(Number);
+
+  const startYmd = `${y}-${String(m).padStart(2, "0")}-01`;
+
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const nextStartYmd = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+
+  return { startYmd, nextStartYmd };
 }
 
 /**
@@ -219,6 +224,7 @@ export default async function Page({ searchParams }: PageProps) {
       : undefined;
 
     const dateLabel = formatJaLabel(date);
+    const isSkipped = skippedDates.includes(date);
 
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
@@ -230,6 +236,7 @@ export default async function Page({ searchParams }: PageProps) {
                   nuts={nuts}
                   selectedNutIds={dailyLogData.selectedNutIds}
                   date={date}
+                  isSkipped={isSkipped}
                 />
               </Suspense>
             </div>

@@ -13,6 +13,7 @@ interface NutCheckListProps {
   nuts: Nut[];
   selectedNutIds: Array<number | string>;
   date: string; // YYYY-MM-DD
+  isSkipped: boolean;
 }
 
 const MINI_NUT_IMAGE_MAP: Record<string, string> = {
@@ -103,6 +104,7 @@ export default function NutCheckList({
   nuts,
   selectedNutIds,
   date,
+  isSkipped,
 }: NutCheckListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -195,6 +197,8 @@ export default function NutCheckList({
   //  「今日のみ」スキップ可能
   const isToday = date === todayYmd;
   const isSkipDisabled = isPending || !isToday;
+
+  const showSkipHighlighted = isSkipped && selected.length === 0;
 
   const handleSkipToday = () => {
     setResult(null);
@@ -399,17 +403,27 @@ export default function NutCheckList({
             disabled={isSkipDisabled}
             className={[
               "rounded-2xl px-4 py-3 font-semibold",
-              "bg-white border border-[#E6E6E4] text-[#333]",
-              "shadow-sm transition-all duration-200 ease-out",
-              "hover:-translate-y-1 hover:shadow-md",
-              "active:translate-y-0 active:shadow-sm",
+              "transition-all duration-200 ease-out",
+              "hover:-translate-y-1",
+              "active:translate-y-0",
               "disabled:opacity-60 disabled:cursor-not-allowed",
+              showSkipHighlighted
+                ? [
+                    "bg-gradient-to-b from-[#FFF1B8] via-[#FFE08A] to-[#F7C948] text-[#6B4E00]",
+                    "border border-[#E6D9A8]",
+                    "shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_14px_rgba(0,0,0,0.12)]",
+                    "hover:bg-gradient-to-b hover:from-[#FFE7A0] hover:via-[#FFD36A] hover:to-[#F0B83C]",
+                    "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(0,0,0,0.14)]",
+                  ].join(" ")
+                : [
+                    "bg-white border border-[#E6E6E4] text-[#333]",
+                    "shadow-sm hover:shadow-md",
+                  ].join(" "),
             ].join(" ")}
             title={!isToday ? "スキップは今日のみ可能です" : undefined}
           >
             今日は食べなかった
           </button>
-
           {/* 右：保存 */}
           <button
             onClick={saveSelection}
