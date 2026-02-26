@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export function createClient() {
-  const cookieStore = cookies();
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +16,7 @@ export function createClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Server Components 等、実行コンテキストによっては cookie への書き込みが許可されないため無視する
+            // Server Components 等では cookie 書き込み不可な場合がある
           }
         },
       },
