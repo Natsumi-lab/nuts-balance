@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SettingsClient from "./SettingsClient";
 
@@ -7,8 +8,10 @@ export default async function SettingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // middlewareで保護している前提ですが、念のためnull
-  const currentEmail = user?.email ?? null;
+  // user が null の場合はログインページへリダイレクト
+  if (!user) {
+    redirect("/auth/login");
+  }
 
-  return <SettingsClient initialEmail={currentEmail} />;
+  return <SettingsClient initialEmail={user.email ?? null} />;
 }
