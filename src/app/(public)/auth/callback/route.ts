@@ -149,7 +149,25 @@ function generateConfirmationHtml(params: {
  * プリフェッチによるトークン消費を防ぐ
  */
 export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
+  const { searchParams, origin } = request.nextUrl;
+
+  // 失敗リンク（Supabaseから error が付いて返ってきた）なら、
+  // 確認画面を出さずにログイン画面へ誘導する
+  const error = searchParams.get("error");
+  const errorCode = searchParams.get("error_code");
+
+  if (error) {
+    const errorUrl = new URL("/auth/login", origin);
+
+    // Supabaseの error_code を、アプリ側で扱いやすいキーに寄せる
+    if (errorCode === "otp_expired") {
+      errorUrl.searchParams.set("error", "otp_expired");
+    } else {
+      errorUrl.searchParams.set("error", "auth_failed");
+    }
+
+    return NextResponse.redirect(errorUrl);
+  }
 
   const code = searchParams.get("code");
   const token = searchParams.get("token");
