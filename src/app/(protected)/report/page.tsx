@@ -195,7 +195,7 @@ export default async function ReportPage({ searchParams }: PageProps) {
           </Suspense>
         </div>
 
-        {/* メインコンテンツ: /appと同様に右カラム360px */}
+        {/* メインコンテンツ */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
           {/* 左エリア：スコアとグラフ */}
           <section className="grid grid-cols-1 gap-5 lg:gap-6">

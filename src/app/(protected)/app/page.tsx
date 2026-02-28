@@ -162,14 +162,18 @@ async function fetchDailyData(date: string): Promise<{
   //  カレンダー用：記録がある日付一覧（摂取日）
   const { data: recordedLogs, error: recordedLogsError } = await supabase
     .from("daily_logs")
-    .select("log_date");
+    .select("log_date")
+    .gte("log_date", startYmd)
+    .lt("log_date", nextStartYmd);
 
   if (recordedLogsError) throw new Error("記録日付一覧の取得に失敗しました");
 
   //  カレンダー用：スキップ日一覧
   const { data: skippedLogs, error: skippedLogsError } = await supabase
     .from("daily_skips")
-    .select("log_date");
+    .select("log_date")
+    .gte("log_date", startYmd)
+    .lt("log_date", nextStartYmd);
 
   if (skippedLogsError) throw new Error("スキップ日付一覧の取得に失敗しました");
 

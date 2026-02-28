@@ -1,5 +1,3 @@
-"use client";
-
 type ScoreStarsProps = {
   /** 0〜5 のスコア（小数可） */
   value: number;
