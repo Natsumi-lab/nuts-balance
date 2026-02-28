@@ -14,7 +14,7 @@ export default function Splash({ nextPath }: Props) {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace(nextPath);
-    }, 1800);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [router, nextPath]);
