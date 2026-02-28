@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { ActionResult } from '@/lib/types';
 
+function getJstTodayYmd(): string {
+  const now = Date.now();
+  const jst = new Date(now + 9 * 60 * 60 * 1000);
+  return jst.toISOString().slice(0, 10);
+}
+
 /**
  * 日々のナッツ記録を保存する Server Action
  *
@@ -114,6 +120,11 @@ export async function skipToday(date: string): Promise<ActionResult> {
     // -----------------------------
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return { success: false, message: '日付の形式が不正です' };
+    }
+
+    const todayYmd = getJstTodayYmd();
+    if (date !== todayYmd) {
+      return { success: false, message: 'スキップは今日のみ可能です' };
     }
 
     // -----------------------------
