@@ -91,6 +91,15 @@ Password: demouser1234
 
 ## 🏗 設計の見どころ
 
+### ER図
+![db-schema](./readme-assets/db-schema.png)
+
+ユーザーは1日ごとに daily_logs を作成し、  
+その日に食べたナッツを daily_log_items として記録します。  
+
+ナッツ情報は nuts マスタテーブルで管理しています。  
+
+
 ### 1. Server / Client 境界の明確化
 - SupabaseクエリはすべてServer側で実行
 - Clientからの直接DB操作はゼロ
