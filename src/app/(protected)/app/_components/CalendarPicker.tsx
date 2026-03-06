@@ -7,16 +7,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ja } from "date-fns/locale";
 
 type Props = {
-  selectedDate: string; // YYYY-MM-DD
-  recordedDates: string[]; // YYYY-MM-DD[]
-  skippedDates: string[]; // YYYY-MM-DD[]
+  selectedDate: string; // URLから渡される選択中の日付（YYYY-MM-DD）
+  recordedDates: string[]; // ナッツ摂取が記録されている日
+  skippedDates: string[]; // 「今日は食べなかった」が選択された日
 };
 
+/**
+ * YYYY-MM-DD → Date
+ * ローカル時間の 00:00 に固定して日付ズレを防ぐ
+ */
 function toDateAtLocalMidnight(ymd: string) {
   return new Date(`${ymd}T00:00:00`);
 }
 
-/** Date -> YYYY-MM-DD（ローカル基準） */
+/**
+ * Date → YYYY-MM-DD（ローカル基準）
+ * DayPicker から渡される Date を URL用文字列へ変換
+ */
 function toYmdLocal(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -32,23 +39,61 @@ export default function CalendarPicker({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 選択日（ローカル00:00で固定）
+  /**
+   * URLで指定された日付を Date に変換
+   * カレンダーの選択状態に使用
+   */
   const selected = useMemo(
     () => toDateAtLocalMidnight(selectedDate),
     [selectedDate],
   );
 
-  // ✅ 表示月を外側で制御
+  /**
+   * カレンダーに表示する月
+   * DayPicker の month を外部 state で制御する
+   */
   const [month, setMonth] = useState<Date>(() => selected);
 
+  /**
+   * URLの日付が変わったら表示月も同期する
+   */
   useEffect(() => {
     setMonth(selected);
   }, [selected]);
 
-  // ✅ 文字列Setにして O(1) 参照
+  /**
+   * 記録日・スキップ日を Set に変換
+   * カレンダー描画時に「その日が該当するか」を高速に判定するため
+   */
   const recordedSet = useMemo(() => new Set(recordedDates), [recordedDates]);
   const skippedSet = useMemo(() => new Set(skippedDates), [skippedDates]);
 
+  /**
+   * 月移動（< >）時の処理
+   *
+   * DayPicker の月変更だけでは Server Component が再実行されないため、
+   * URLの date クエリも更新してページデータを再取得する。
+   *
+   * 月変更時はその月の1日を date に設定する。
+   */
+  const onMonthChange = (nextMonth: Date) => {
+    setMonth(nextMonth);
+
+    const yyyy = nextMonth.getFullYear();
+    const mm = String(nextMonth.getMonth() + 1).padStart(2, "0");
+    const nextDate = `${yyyy}-${mm}-01`;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("date", nextDate);
+    router.push(`/app?${params.toString()}`);
+  };
+
+  /**
+   * 日付クリック時の処理
+   *
+   * 選択された日付を URL に反映して
+   * ページ全体の表示をその日付に切り替える
+   */
   const onSelect = (date?: Date) => {
     if (!date) return;
 
@@ -246,11 +291,10 @@ export default function CalendarPicker({
         selected={selected}
         onSelect={onSelect}
         month={month}
-        onMonthChange={setMonth}
+        onMonthChange={onMonthChange}
         weekStartsOn={1}
         disabled={{ after: new Date() }}
         locale={ja}
-        // ✅ Date[] をやめて、関数 matcher にする（これが決定打）
         modifiers={{
           recorded: (d) => recordedSet.has(toYmdLocal(d)),
           skipped: (d) => skippedSet.has(toYmdLocal(d)),
