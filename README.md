@@ -91,15 +91,6 @@ Password: demouser1234
 
 ## 🏗 設計の見どころ
 
-### ER図
-![db-schema](./readme-assets/db-schema.png)
-
-ユーザーは1日ごとに daily_logs を作成し、  
-その日に食べたナッツを daily_log_items として記録します。  
-
-ナッツ情報は nuts マスタテーブルで管理しています。  
-
-
 ### 1. Server / Client 境界の明確化
 - SupabaseクエリはすべてServer側で実行
 - Clientからの直接DB操作はゼロ
@@ -127,6 +118,27 @@ UIやDBに依存しない純粋関数設計。
 ### 5. 型安全な ActionResult 設計
 Server Actionsの戻り値を `{ success: boolean; message: string }` で統一し、  
 成功/失敗を一貫して扱える設計。
+
+---
+### ER図
+![db-schema](./readme-assets/db-schema.png)
+
+ユーザーは1日ごとに `daily_logs` を作成し、  
+その日に食べたナッツを `daily_log_items` として記録します。
+
+ナッツ情報は `nuts` マスタテーブルで管理しています。  
+また、連続記録日数は `streaks`、記録をスキップした日は `daily_skips` に保存します。
+
+#### リレーション
+- `auth_users` と `daily_logs` は **1:N**
+- `daily_logs` と `daily_log_items` は **1:N**
+- `daily_log_items` と `nuts` は **N:1**
+
+#### データ整合性
+- `daily_logs` : `UNIQUE(user_id, log_date)` により **1ユーザー1日1ログ**を保証  
+- `daily_log_items` : `UNIQUE(daily_log_id, nut_id)` により **同一ナッツの重複登録を防止**
+
+これらの制約により、**データの重複や不整合をデータベースレベルで防止しています。**
 
 ---
 
