@@ -12,14 +12,16 @@ export async function createClient() {
         getAll: () => cookieStore.getAll(),
         setAll: (cookiesToSet) => {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
+            for (const { name, value, options } of cookiesToSet) {
               cookieStore.set(name, value, options);
-            });
+            }
           } catch {
-            // Server Components 等では cookie 書き込み不可な場合がある
+            // Server Component では Cookie の書き込みが許可されていないため、
+            // 実行コンテキストによってはここで例外が発生する。
+            // Supabase 公式実装に合わせて無視する。
           }
         },
       },
-    }
+    },
   );
 }
