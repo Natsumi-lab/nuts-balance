@@ -1,15 +1,21 @@
-import { computeDailyScores, type DailyScores, type ScoreKey, type ScoreResult } from "./score";
+import {
+  computeDailyScores,
+  getStrongestScoreKey,
+  isBalancedScore,
+  type DailyScores,
+  type ScoreKey,
+} from "./score";
 import type { Nut } from "@/lib/types";
 
 /**
- * 月次スコア集計結果の型
+ * 月次スコア集計結果
  */
 export type MonthlyScoreResult = {
   /** 月平均スコア（5軸） */
   averageScores: DailyScores;
   /** 記録日数 */
   recordDays: number;
-  /** バランスが取れているか（max-min <= 1） */
+  /** バランスが取れているか（max - min <= 1） */
   isBalanced: boolean;
   /** 最も高いスコアのキー */
   strongestKey: ScoreKey;
@@ -48,89 +54,172 @@ export type MonthlyReportData = {
   recordedDates: string[];
 };
 
+const SCORE_KEYS: ScoreKey[] = [
+  "antioxidant",
+  "mineral",
+  "fiber",
+  "vitamin",
+  "variety",
+];
+
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
+
 /**
- * 月内の最大連続日数を計算
- * streaksテーブルは使わず、log_dateから算出
+ * 小数第1位で四捨五入する
+ */
+function roundToOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/**
+ * 0点の5軸スコアを返す
+ */
+function createEmptyScores(): DailyScores {
+  return {
+    antioxidant: 0,
+    mineral: 0,
+    fiber: 0,
+    vitamin: 0,
+    variety: 0,
+  };
+}
+
+/**
+ * 2つの日付文字列の差を日数で返す
  *
- * @param dates - 対象月の記録日付（昇順でソート済み）
- * @returns 月内最大連続日数
+ * 前提:
+ * - どちらも YYYY-MM-DD 形式
+ * - currDate が prevDate と同日または未来日であることを想定
+ */
+function getDayDifference(prevDate: string, currDate: string): number {
+  const previous = new Date(prevDate);
+  const current = new Date(currDate);
+
+  return Math.round(
+    (current.getTime() - previous.getTime()) / MILLISECONDS_PER_DAY
+  );
+}
+
+/**
+ * 月平均スコア計算用の合計値を初期化する
+ */
+function createInitialScoreSums(): Record<ScoreKey, number> {
+  return {
+    antioxidant: 0,
+    mineral: 0,
+    fiber: 0,
+    vitamin: 0,
+    variety: 0,
+  };
+}
+
+/**
+ * 各日の日次スコアを合計し、月平均スコアを作る
+ */
+function calculateAverageScores(
+  nuts: Nut[],
+  dailyRecords: DailyRecord[]
+): DailyScores {
+  const scoreSums = createInitialScoreSums();
+
+  for (const record of dailyRecords) {
+    const dailyScores = computeDailyScores(nuts, record.nutIds).scores;
+
+    for (const key of SCORE_KEYS) {
+      scoreSums[key] += dailyScores[key];
+    }
+  }
+
+  const recordDays = dailyRecords.length;
+
+  return {
+    antioxidant: roundToOneDecimal(scoreSums.antioxidant / recordDays),
+    mineral: roundToOneDecimal(scoreSums.mineral / recordDays),
+    fiber: roundToOneDecimal(scoreSums.fiber / recordDays),
+    vitamin: roundToOneDecimal(scoreSums.vitamin / recordDays),
+    variety: roundToOneDecimal(scoreSums.variety / recordDays),
+  };
+}
+
+/**
+ * 月内の最大連続記録日数を計算する
+ *
+ * streaks テーブルは使わず、対象月の logDate から算出する。
+ * 同一日付が重複していても、連続日数には1日として扱う。
  */
 export function calculateMaxStreakInMonth(dates: string[]): number {
-  if (dates.length === 0) return 0;
-  if (dates.length === 1) return 1;
+  if (dates.length === 0) {
+    return 0;
+  }
 
-  // 日付を昇順でソート
-  const sortedDates = [...dates].sort();
+  const sortedUniqueDates = Array.from(new Set(dates)).sort();
+
+  if (sortedUniqueDates.length === 1) {
+    return 1;
+  }
 
   let maxStreak = 1;
   let currentStreak = 1;
 
-  for (let i = 1; i < sortedDates.length; i++) {
-    const prevDate = new Date(sortedDates[i - 1]);
-    const currDate = new Date(sortedDates[i]);
+  for (let index = 1; index < sortedUniqueDates.length; index++) {
+    const previousDate = sortedUniqueDates[index - 1];
+    const currentDate = sortedUniqueDates[index];
+    const dayDifference = getDayDifference(previousDate, currentDate);
 
-    // 日付差を計算（ミリ秒→日）
-    const diffDays = Math.round(
-      (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (diffDays === 1) {
-      // 連続している
-      currentStreak++;
+    if (dayDifference === 1) {
+      currentStreak += 1;
       maxStreak = Math.max(maxStreak, currentStreak);
-    } else {
-      // 連続が途切れた
-      currentStreak = 1;
+      continue;
     }
+
+    currentStreak = 1;
   }
 
   return maxStreak;
 }
 
 /**
- * ナッツ別の消費日数を集計
+ * ナッツごとの「食べた日数」を集計する
  *
- * @param nuts - ナッツマスターデータ
- * @param dailyRecords - 日次記録データ
- * @returns ナッツ別消費日数（全ナッツ、0日含む）
+ * 同じ日に同じナッツIDが複数回含まれていても、1日として数える。
+ * 戻り値は全ナッツを含み、未記録のナッツも 0 日で返す。
  */
 export function aggregateNutConsumption(
   nuts: Nut[],
   dailyRecords: DailyRecord[]
 ): NutConsumptionData[] {
-  // ナッツごとにユニーク日数をカウント
-  const nutDaysMap = new Map<number, Set<string>>();
+  const consumedDatesByNutId = new Map<number, Set<string>>();
 
-  // 初期化（全ナッツを0日で開始）
   for (const nut of nuts) {
-    nutDaysMap.set(nut.id, new Set());
+    consumedDatesByNutId.set(nut.id, new Set());
   }
 
-  // 各日の記録を集計
   for (const record of dailyRecords) {
-    for (const nutId of record.nutIds) {
-      const daysSet = nutDaysMap.get(nutId);
-      if (daysSet) {
-        daysSet.add(record.logDate);
+    const uniqueNutIds = Array.from(new Set(record.nutIds));
+
+    for (const nutId of uniqueNutIds) {
+      const consumedDates = consumedDatesByNutId.get(nutId);
+
+      if (!consumedDates) {
+        continue;
       }
+
+      consumedDates.add(record.logDate);
     }
   }
 
-  // 結果を配列に変換
   return nuts.map((nut) => ({
     nutId: nut.id,
     name: nut.name,
-    days: nutDaysMap.get(nut.id)?.size ?? 0,
+    days: consumedDatesByNutId.get(nut.id)?.size ?? 0,
   }));
 }
 
 /**
- * 月次スコアを計算
- * 日次スコアの平均を5軸すべてで算出
+ * 月次スコアを計算する
  *
- * @param nuts - ナッツマスターデータ
- * @param dailyRecords - 日次記録データ
- * @returns 月次スコア結果
+ * - 各日の5軸スコアを算出し、その平均を月次スコアとする
+ * - averageScores は小数第1位で四捨五入する
  */
 export function calculateMonthlyScore(
   nuts: Nut[],
@@ -138,88 +227,36 @@ export function calculateMonthlyScore(
 ): MonthlyScoreResult {
   const recordDays = dailyRecords.length;
 
-  // 記録なしの場合
   if (recordDays === 0) {
     return {
-      averageScores: {
-        antioxidant: 0,
-        mineral: 0,
-        fiber: 0,
-        vitamin: 0,
-        variety: 0,
-      },
+      averageScores: createEmptyScores(),
       recordDays: 0,
       isBalanced: true,
       strongestKey: "variety",
     };
   }
 
-  // 各日のスコアを計算して集計
-  const scoreKeys: ScoreKey[] = ["antioxidant", "mineral", "fiber", "vitamin", "variety"];
-  const scoreSums: Record<ScoreKey, number> = {
-    antioxidant: 0,
-    mineral: 0,
-    fiber: 0,
-    vitamin: 0,
-    variety: 0,
-  };
-
-  for (const record of dailyRecords) {
-    const dailyResult: ScoreResult = computeDailyScores(nuts, record.nutIds);
-    for (const key of scoreKeys) {
-      scoreSums[key] += dailyResult.scores[key];
-    }
-  }
-
-  // 平均を計算（小数点1位で四捨五入）
-  const averageScores: DailyScores = {
-    antioxidant: Math.round((scoreSums.antioxidant / recordDays) * 10) / 10,
-    mineral: Math.round((scoreSums.mineral / recordDays) * 10) / 10,
-    fiber: Math.round((scoreSums.fiber / recordDays) * 10) / 10,
-    vitamin: Math.round((scoreSums.vitamin / recordDays) * 10) / 10,
-    variety: Math.round((scoreSums.variety / recordDays) * 10) / 10,
-  };
-
-  // バランス判定（max - min <= 1）
-  const values = Object.values(averageScores);
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const isBalanced = max - min <= 1;
-
-  // 最も高いスコアのキーを決定
-  const order: ScoreKey[] = ["antioxidant", "mineral", "fiber", "vitamin", "variety"];
-  let strongestKey: ScoreKey = "variety";
-  let best = -1;
-  for (const k of order) {
-    const v = averageScores[k];
-    if (v > best) {
-      best = v;
-      strongestKey = k;
-    }
-  }
+  const averageScores = calculateAverageScores(nuts, dailyRecords);
 
   return {
     averageScores,
     recordDays,
-    isBalanced,
-    strongestKey,
+    isBalanced: isBalancedScore(averageScores),
+    strongestKey: getStrongestScoreKey(averageScores),
   };
 }
 
 /**
- * 月次レポートデータを一括で集計
- *
- * @param yearMonth - 対象年月（YYYY-MM）
- * @param nuts - ナッツマスターデータ
- * @param dailyRecords - 日次記録データ
- * @returns 月次レポートデータ
+ * 月次レポート表示に必要なデータを一括で集計する
  */
 export function aggregateMonthlyReport(
   yearMonth: string,
   nuts: Nut[],
   dailyRecords: DailyRecord[]
 ): MonthlyReportData {
-  const recordedDates = dailyRecords.map((r) => r.logDate).sort();
+  const recordedDates = Array.from(
+    new Set(dailyRecords.map((record) => record.logDate))
+  ).sort();
 
   return {
     yearMonth,

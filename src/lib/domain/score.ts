@@ -1,54 +1,141 @@
 import type { Nut } from "@/lib/types";
 
-export type ScoreKey = "antioxidant" | "mineral" | "fiber" | "vitamin" | "variety";
+export type ScoreKey =
+  | "antioxidant"
+  | "mineral"
+  | "fiber"
+  | "vitamin"
+  | "variety";
 
 export type DailyScores = Record<ScoreKey, number>;
 
 export type ScoreResult = {
-  scores: DailyScores;        // 各軸 0〜5
-  varietyCount: number;       // 0〜6（選択種類数）
-  isBalanced: boolean;        // max-min <= 1
-  strongestKey: Exclude<ScoreKey, "variety"> | "variety";
+  scores: DailyScores;
+  varietyCount: number;
+  isBalanced: boolean;
+  strongestKey: ScoreKey;
 };
 
-function clampInt(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, Math.round(n)));
+/**
+ * ドメイン定数
+ */
+const MAX_VARIETY_COUNT = 6;
+const MAX_STAR_SCORE = 5;
+const MAX_NUTRIENT_SCORE = 3;
+const BALANCED_SCORE_DIFF_THRESHOLD = 1;
+
+/**
+ * 値を四捨五入し、指定範囲に収める
+ */
+function roundAndClamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Math.round(value)));
 }
 
 /**
- * 0〜3（nutsのスコア）を平均 → 0〜5へスケールして四捨五入
+ * 栄養4軸の平均スコア（0〜3）を
+ * 表示用の5段階スコア（0〜5）に変換する
  */
-function scale0to3_to_0to5(avg0to3: number): number {
-  return clampInt((avg0to3 / 3) * 5, 0, 5);
+function convertNutrientAverageToStarScore(value: number): number {
+  return roundAndClamp(
+    (value / MAX_NUTRIENT_SCORE) * MAX_STAR_SCORE,
+    0,
+    MAX_STAR_SCORE
+  );
 }
 
 /**
- * 種類数 0〜6 を 0〜5 にスケールして四捨五入
+ * ナッツ種類数（0〜6）を
+ * 表示用の5段階スコア（0〜5）に変換する
  */
-function scale0to6_to_0to5(count0to6: number): number {
-  const c = Math.max(0, Math.min(6, count0to6));
-  return clampInt((c / 6) * 5, 0, 5);
+function convertVarietyCountToStarScore(count: number): number {
+  const safeCount = Math.max(0, Math.min(MAX_VARIETY_COUNT, count));
+
+  return roundAndClamp(
+    (safeCount / MAX_VARIETY_COUNT) * MAX_STAR_SCORE,
+    0,
+    MAX_STAR_SCORE
+  );
 }
 
 /**
- * 指定日の選択ナッツから「5軸の★(0〜5)」を算出
- * - nuts側の各スコアは 1〜3 を想定（型は number だがDBはsmallint）
- * - スコア自体は保存せず、毎回算出
+ * 空のスコア（未選択時）
  */
-export function computeDailyScores(nuts: Nut[], selectedNutIds: number[]): ScoreResult {
-  // 種類数（重複排除）
-  const uniqueIds = Array.from(new Set(selectedNutIds)).filter((v) => Number.isFinite(v));
-  const varietyCount = Math.min(6, uniqueIds.length);
+function createEmptyScores(): DailyScores {
+  return {
+    antioxidant: 0,
+    mineral: 0,
+    fiber: 0,
+    vitamin: 0,
+    variety: 0,
+  };
+}
 
-  // 未選択なら全部0
-  if (uniqueIds.length === 0) {
-    const scores: DailyScores = {
-      antioxidant: 0,
-      mineral: 0,
-      fiber: 0,
-      vitamin: 0,
-      variety: 0,
-    };
+/**
+ * strongestKey を決定
+ * 同点の場合は優先順で決める
+ */
+export function getStrongestScoreKey(scores: DailyScores): ScoreKey {
+  const priorityOrder: ScoreKey[] = [
+    "antioxidant",
+    "mineral",
+    "fiber",
+    "vitamin",
+    "variety",
+  ];
+
+  let strongestKey: ScoreKey = "variety";
+  let bestScore = -1;
+
+  for (const key of priorityOrder) {
+    const score = scores[key];
+
+    if (score > bestScore) {
+      bestScore = score;
+      strongestKey = key;
+    }
+  }
+
+  return strongestKey;
+}
+
+/**
+ * 5軸スコアのバランス判定
+ * max - min <= 1 をバランス良しとする
+ */
+export function isBalancedScore(scores: DailyScores): boolean {
+  const values = Object.values(scores);
+
+  const maxScore = Math.max(...values);
+  const minScore = Math.min(...values);
+
+  return maxScore - minScore <= BALANCED_SCORE_DIFF_THRESHOLD;
+}
+
+/**
+ * 選択されたナッツ一覧から日次スコアを算出する
+ *
+ * - 栄養4軸は選択ナッツの平均値から算出
+ * - variety は選択された種類数から算出
+ * - スコアはDBに保存せず表示時に毎回計算する
+ */
+export function computeDailyScores(
+  nuts: Nut[],
+  selectedNutIds: number[]
+): ScoreResult {
+  /**
+   * variety は「種類数」で評価するため
+   * 重複IDは除外する
+   */
+  const uniqueNutIds = Array.from(new Set(selectedNutIds)).filter(Number.isFinite);
+
+  const varietyCount = Math.min(MAX_VARIETY_COUNT, uniqueNutIds.length);
+
+  /**
+   * ナッツ未選択の場合
+   */
+  if (uniqueNutIds.length === 0) {
+    const scores = createEmptyScores();
+
     return {
       scores,
       varietyCount: 0,
@@ -57,34 +144,40 @@ export function computeDailyScores(nuts: Nut[], selectedNutIds: number[]): Score
     };
   }
 
-  const byId = new Map<number, Nut>(nuts.map((n) => [n.id, n]));
+  /**
+   * id -> Nut 参照用Map
+   */
+  const nutsById = new Map<number, Nut>(nuts.map((nut) => [nut.id, nut]));
 
-  let sumA = 0;
-  let sumM = 0;
-  let sumF = 0;
-  let sumV = 0;
-  let count = 0;
+  let antioxidantTotal = 0;
+  let mineralTotal = 0;
+  let fiberTotal = 0;
+  let vitaminTotal = 0;
+  let validNutCount = 0;
 
-  for (const id of uniqueIds) {
-    const nut = byId.get(id);
+  for (const nutId of uniqueNutIds) {
+    const nut = nutsById.get(nutId);
+
     if (!nut) continue;
 
-    sumA += nut.score_antioxidant ?? 0;
-    sumM += nut.score_mineral ?? 0;
-    sumF += nut.score_fiber ?? 0;
-    sumV += nut.score_vitamin ?? 0;
-    count += 1;
+    antioxidantTotal += nut.score_antioxidant ?? 0;
+    mineralTotal += nut.score_mineral ?? 0;
+    fiberTotal += nut.score_fiber ?? 0;
+    vitaminTotal += nut.score_vitamin ?? 0;
+
+    validNutCount += 1;
   }
 
-  // あり得ないが安全に
-  if (count === 0) {
+  /**
+   * selectedNutIds に存在しても
+   * nutsマスタに存在しないIDしかなかった場合
+   */
+  if (validNutCount === 0) {
     const scores: DailyScores = {
-      antioxidant: 0,
-      mineral: 0,
-      fiber: 0,
-      vitamin: 0,
-      variety: scale0to6_to_0to5(varietyCount),
+      ...createEmptyScores(),
+      variety: convertVarietyCountToStarScore(varietyCount),
     };
+
     return {
       scores,
       varietyCount,
@@ -93,36 +186,20 @@ export function computeDailyScores(nuts: Nut[], selectedNutIds: number[]): Score
     };
   }
 
-  const avgA = sumA / count; // 0〜3
-  const avgM = sumM / count;
-  const avgF = sumF / count;
-  const avgV = sumV / count;
-
   const scores: DailyScores = {
-    antioxidant: scale0to3_to_0to5(avgA),
-    mineral: scale0to3_to_0to5(avgM),
-    fiber: scale0to3_to_0to5(avgF),
-    vitamin: scale0to3_to_0to5(avgV),
-    variety: scale0to6_to_0to5(varietyCount),
+    antioxidant: convertNutrientAverageToStarScore(
+      antioxidantTotal / validNutCount
+    ),
+    mineral: convertNutrientAverageToStarScore(mineralTotal / validNutCount),
+    fiber: convertNutrientAverageToStarScore(fiberTotal / validNutCount),
+    vitamin: convertNutrientAverageToStarScore(vitaminTotal / validNutCount),
+    variety: convertVarietyCountToStarScore(varietyCount),
   };
 
-  // バランス判定（5軸のmax-min）
-  const values = Object.values(scores);
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const isBalanced = max - min <= 1;
-
-  // strongest（同点なら優先順で決める）
-  const order: ScoreKey[] = ["antioxidant", "mineral", "fiber", "vitamin", "variety"];
-  let strongestKey: ScoreKey = "variety";
-  let best = -1;
-  for (const k of order) {
-    const v = scores[k];
-    if (v > best) {
-      best = v;
-      strongestKey = k;
-    }
-  }
-
-  return { scores, varietyCount, isBalanced, strongestKey };
+  return {
+    scores,
+    varietyCount,
+    isBalanced: isBalancedScore(scores),
+    strongestKey: getStrongestScoreKey(scores),
+  };
 }

@@ -223,7 +223,7 @@ export default async function Page({ searchParams }: PageProps) {
     const scoreResult = computeDailyScores(nuts, savedSelectedIds);
 
     const comment = isSaved
-      ? generateDailyComment({ date, streak: monthStreak, scoreResult })
+      ? generateDailyComment({ date, scoreResult })
       : undefined;
 
     const dateLabel = formatJaLabel(date);
