@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { Nut, DailyLogData } from "@/lib/types";
+import type { DailyLogData, Nut } from "@/lib/types";
 import NutCheckList from "./_components/NutCheckList";
 import CharacterStreak from "./_components/CharacterStreak";
 import DateInitializer from "./_components/DateInitializer";
@@ -12,11 +12,26 @@ import {
   SCORE_EMPTY_MESSAGE,
 } from "@/lib/domain/comment";
 
-interface PageProps {
+type PageProps = {
   searchParams: Promise<{
     date?: string;
   }>;
-}
+};
+
+type DailyPageData = {
+  nuts: Nut[];
+  dailyLogData: DailyLogData;
+  monthStreak: number;
+  monthRecordDays: number;
+  recordedDates: string[];
+  skippedDates: string[];
+};
+
+const CARD_CLASS_NAME =
+  "bg-card border border-border rounded-2xl shadow-lg overflow-hidden";
+
+const DAYS_OF_WEEK_JA = ["日", "月", "火", "水", "木", "金", "土"] as const;
+const MONTH_FIRST_DAY = "01";
 
 function ErrorMessage({ message }: { message: string }) {
   return (
@@ -46,7 +61,7 @@ function LoadingPlaceholder() {
     <div className="bg-card border border-border rounded-2xl shadow-md">
       <div className="flex items-center justify-center h-64 p-4">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-3 border-secondary border-t-accent"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-3 border-secondary border-t-accent" />
           <p className="text-sm text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -54,154 +69,249 @@ function LoadingPlaceholder() {
   );
 }
 
-/** YYYY-MM-DD -> Date */
-function parseYmd(date: string): Date {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d);
+/**
+ * YYYY-MM-DD をローカルの Date に変換する
+ */
+function parseYmd(ymd: string): Date {
+  const [year, month, day] = ymd.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
-/** Date -> YYYY-MM-DD */
+/**
+ * Date を YYYY-MM-DD に変換する
+ */
 function formatYmd(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
-/** 今月範囲（開始:月初、終了:翌月初） */
-function getMonthRangeYmd(baseYmd: string) {
-  const [y, m] = baseYmd.split("-").map(Number);
+/**
+ * 指定日が属する月の範囲を返す
+ *
+ * - startYmd: 月初
+ * - nextStartYmd: 翌月初
+ */
+function getMonthRangeYmd(baseYmd: string): {
+  startYmd: string;
+  nextStartYmd: string;
+} {
+  const [year, month] = baseYmd.split("-").map(Number);
 
-  const startYmd = `${y}-${String(m).padStart(2, "0")}-01`;
+  const startYmd = `${year}-${String(month).padStart(2, "0")}-${MONTH_FIRST_DAY}`;
 
-  const nextY = m === 12 ? y + 1 : y;
-  const nextM = m === 12 ? 1 : m + 1;
-  const nextStartYmd = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextStartYmd = `${nextYear}-${String(nextMonth).padStart(2, "0")}-${MONTH_FIRST_DAY}`;
 
   return { startYmd, nextStartYmd };
 }
 
 /**
- * 今月ストリーク（baseYmdから遡る。月初より前はカウントしない）
- * 仕様：baseYmd が未記録なら 0
+ * 基準日から月初までさかのぼり、当月内の連続記録日数を数える
+ *
+ * 仕様:
+ * - 基準日が未記録なら 0
+ * - 月初より前は数えない
  */
-function calcMonthlyStreak(logDatesYmd: string[], baseYmd: string): number {
-  const set = new Set(logDatesYmd);
-  if (!set.has(baseYmd)) return 0;
+function calculateMonthlyStreak(
+  logDatesYmd: string[],
+  baseYmd: string,
+): number {
+  const recordedDateSet = new Set(logDatesYmd);
 
-  const base = parseYmd(baseYmd);
-  const monthStart = new Date(base.getFullYear(), base.getMonth(), 1);
-
-  const cur = new Date(base);
-  let count = 0;
-
-  while (cur.getTime() >= monthStart.getTime()) {
-    const ymd = formatYmd(cur);
-    if (!set.has(ymd)) break;
-    count += 1;
-    cur.setDate(cur.getDate() - 1);
+  if (!recordedDateSet.has(baseYmd)) {
+    return 0;
   }
 
-  return count;
+  const baseDate = parseYmd(baseYmd);
+  const monthStartDate = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth(),
+    1,
+  );
+
+  const currentDate = new Date(baseDate);
+  let streak = 0;
+
+  while (currentDate.getTime() >= monthStartDate.getTime()) {
+    const currentYmd = formatYmd(currentDate);
+
+    if (!recordedDateSet.has(currentYmd)) {
+      break;
+    }
+
+    streak += 1;
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+
+  return streak;
 }
 
-async function fetchDailyData(date: string): Promise<{
-  nuts: Nut[];
-  dailyLogData: DailyLogData;
-  monthStreak: number;
-  monthRecordDays: number;
-  recordedDates: string[];
-  skippedDates: string[];
-}> {
-  const supabase = await createClient();
+/**
+ * DB から取得した nut_id 一覧を、フォームやドメインで使う string[] に変換する
+ */
+function toSelectedNutIds(nutIds: Array<{ nut_id: number }>): string[] {
+  return nutIds.map((item) => String(item.nut_id));
+}
 
-  const { data: nuts, error: nutsError } = await supabase
-    .from("nuts")
-    .select("*")
-    .order("id");
+/**
+ * 保存済み selectedNutIds を score 計算用の number[] に変換する
+ */
+function toNumericNutIds(selectedNutIds: string[]): number[] {
+  return selectedNutIds.map((value) => Number(value)).filter(Number.isFinite);
+}
 
-  if (nutsError) throw new Error("ナッツの取得に失敗しました");
+async function fetchNuts(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await supabase.from("nuts").select("*").order("id");
 
-  const { data: dailyLog, error: dailyLogError } = await supabase
+  if (error) {
+    throw new Error("ナッツの取得に失敗しました");
+  }
+
+  return (data ?? []) as Nut[];
+}
+
+async function fetchDailyLog(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string,
+) {
+  const { data, error } = await supabase
     .from("daily_logs")
     .select("*")
     .eq("log_date", date)
     .maybeSingle();
 
-  if (dailyLogError) throw new Error("日誌の取得に失敗しました");
-
-  let selectedNutIds: string[] = [];
-
-  if (dailyLog) {
-    const { data: dailyLogItems, error: itemsError } = await supabase
-      .from("daily_log_items")
-      .select("nut_id")
-      .eq("daily_log_id", dailyLog.id);
-
-    if (itemsError) throw new Error("日誌アイテムの取得に失敗しました");
-
-    selectedNutIds = dailyLogItems.map((item) => item.nut_id);
+  if (error) {
+    throw new Error("日誌の取得に失敗しました");
   }
 
-  //  今月の集計（月次リセット）
+  return data;
+}
+
+async function fetchDailyLogData(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string,
+): Promise<DailyLogData> {
+  const dailyLog = await fetchDailyLog(supabase, date);
+
+  if (!dailyLog) {
+    return {
+      dailyLog: null,
+      selectedNutIds: [],
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("daily_log_items")
+    .select("nut_id")
+    .eq("daily_log_id", dailyLog.id);
+
+  if (error) {
+    throw new Error("日誌アイテムの取得に失敗しました");
+  }
+
+  return {
+    dailyLog,
+    selectedNutIds: toSelectedNutIds(data ?? []),
+  };
+}
+
+async function fetchMonthlyLogDates(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string,
+): Promise<string[]> {
   const { startYmd, nextStartYmd } = getMonthRangeYmd(date);
 
-  const { data: monthLogs, error: monthErr } = await supabase
+  const { data, error } = await supabase
     .from("daily_logs")
     .select("log_date")
     .gte("log_date", startYmd)
     .lt("log_date", nextStartYmd)
     .order("log_date", { ascending: true });
 
-  if (monthErr) throw new Error("今月の記録日数の取得に失敗しました");
+  if (error) {
+    throw new Error("今月の記録日数の取得に失敗しました");
+  }
 
-  const monthLogDates = (monthLogs ?? []).map((r) => r.log_date as string);
-  const monthRecordDays = monthLogDates.length;
-  const monthStreak = calcMonthlyStreak(monthLogDates, date);
+  return (data ?? []).map((row) => row.log_date);
+}
 
-  //  カレンダー用：記録がある日付一覧（摂取日）
-  const { data: recordedLogs, error: recordedLogsError } = await supabase
+async function fetchRecordedDates(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string,
+): Promise<string[]> {
+  const { startYmd, nextStartYmd } = getMonthRangeYmd(date);
+
+  const { data, error } = await supabase
     .from("daily_logs")
     .select("log_date")
     .gte("log_date", startYmd)
     .lt("log_date", nextStartYmd);
 
-  if (recordedLogsError) throw new Error("記録日付一覧の取得に失敗しました");
+  if (error) {
+    throw new Error("記録日付一覧の取得に失敗しました");
+  }
 
-  //  カレンダー用：スキップ日一覧
-  const { data: skippedLogs, error: skippedLogsError } = await supabase
+  return (data ?? []).map((row) => row.log_date);
+}
+
+async function fetchSkippedDates(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string,
+): Promise<string[]> {
+  const { startYmd, nextStartYmd } = getMonthRangeYmd(date);
+
+  const { data, error } = await supabase
     .from("daily_skips")
     .select("log_date")
     .gte("log_date", startYmd)
     .lt("log_date", nextStartYmd);
 
-  if (skippedLogsError) throw new Error("スキップ日付一覧の取得に失敗しました");
+  if (error) {
+    throw new Error("スキップ日付一覧の取得に失敗しました");
+  }
+
+  return (data ?? []).map((row) => row.log_date);
+}
+
+async function fetchDailyPageData(date: string): Promise<DailyPageData> {
+  const supabase = await createClient();
+
+  const [nuts, dailyLogData, monthLogDates, recordedDates, skippedDates] =
+    await Promise.all([
+      fetchNuts(supabase),
+      fetchDailyLogData(supabase, date),
+      fetchMonthlyLogDates(supabase, date),
+      fetchRecordedDates(supabase, date),
+      fetchSkippedDates(supabase, date),
+    ]);
 
   return {
-    nuts: nuts as Nut[],
-    dailyLogData: {
-      dailyLog: dailyLog || null,
-      selectedNutIds,
-    },
-    monthStreak,
-    monthRecordDays,
-    recordedDates: (recordedLogs ?? []).map((log) => log.log_date),
-    skippedDates: (skippedLogs ?? []).map((log) => log.log_date),
+    nuts,
+    dailyLogData,
+    monthStreak: calculateMonthlyStreak(monthLogDates, date),
+    monthRecordDays: monthLogDates.length,
+    recordedDates,
+    skippedDates,
   };
 }
 
 function formatJaLabel(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  const days = ["日", "月", "火", "水", "木", "金", "土"];
-  return `${dt.getMonth() + 1}/${dt.getDate()}（${days[dt.getDay()]}）`;
+  const parsedDate = parseYmd(date);
+
+  return `${parsedDate.getMonth() + 1}/${parsedDate.getDate()}（${DAYS_OF_WEEK_JA[parsedDate.getDay()]}）`;
 }
 
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
-  const { date } = params;
+  const date = params.date;
 
-  if (!date) return <DateInitializer />;
+  if (!date) {
+    return <DateInitializer />;
+  }
 
   try {
     const {
@@ -211,28 +321,22 @@ export default async function Page({ searchParams }: PageProps) {
       monthRecordDays,
       recordedDates,
       skippedDates,
-    } = await fetchDailyData(date);
+    } = await fetchDailyPageData(date);
 
-    const savedSelectedIds = dailyLogData.selectedNutIds
-      .map((v) => Number(v))
-      .filter((v) => Number.isFinite(v));
-
-    const hasSelection = savedSelectedIds.length > 0;
-    const isSaved = dailyLogData.dailyLog !== null && hasSelection;
-
-    const scoreResult = computeDailyScores(nuts, savedSelectedIds);
-
+    const selectedNutIds = toNumericNutIds(dailyLogData.selectedNutIds);
+    const hasSelectedNuts = selectedNutIds.length > 0;
+    const isSaved = dailyLogData.dailyLog !== null && hasSelectedNuts;
+    const scoreResult = computeDailyScores(nuts, selectedNutIds);
     const comment = isSaved
       ? generateDailyComment({ date, scoreResult })
       : undefined;
-
     const dateLabel = formatJaLabel(date);
     const isSkipped = skippedDates.includes(date);
 
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px] lg:gap-6">
         <section className="grid grid-cols-1 gap-5 lg:gap-6">
-          <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
+          <div className={CARD_CLASS_NAME}>
             <div className="p-5">
               <Suspense fallback={<LoadingPlaceholder />}>
                 <NutCheckList
@@ -246,7 +350,7 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
-            <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
+            <div className={CARD_CLASS_NAME}>
               <div className="p-5">
                 <CalendarPicker
                   selectedDate={date}
@@ -256,12 +360,12 @@ export default async function Page({ searchParams }: PageProps) {
               </div>
             </div>
 
-            <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
+            <div className={CARD_CLASS_NAME}>
               <div className="p-5">
                 <TodayScore
                   isSaved={isSaved}
                   scores={isSaved ? scoreResult.scores : undefined}
-                  comment={isSaved ? comment : undefined}
+                  comment={comment}
                   emptyMessage={SCORE_EMPTY_MESSAGE}
                   dateLabel={dateLabel}
                 />
@@ -270,7 +374,7 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
         </section>
 
-        <aside className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
+        <aside className={CARD_CLASS_NAME}>
           <div className="p-5">
             <Suspense fallback={<LoadingPlaceholder />}>
               <CharacterStreak
@@ -283,7 +387,9 @@ export default async function Page({ searchParams }: PageProps) {
         </aside>
       </div>
     );
-  } catch {
+  } catch (error) {
+    console.error("Failed to load daily dashboard page", error);
+
     return (
       <div className="space-y-8">
         <div className="text-center">
