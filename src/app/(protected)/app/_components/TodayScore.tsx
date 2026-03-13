@@ -6,13 +6,22 @@ import type { DailyScores, ScoreKey } from "@/lib/domain/score";
 
 export type TodayScoreProps = {
   isSaved: boolean;
-  dateLabel?: string; // 例：M/D（W）
-  scores?: DailyScores; // 保存済みのみ必須
-  comment?: string; // 保存済みのみ必須
+  /** 例: M/D（W） */
+  dateLabel?: string;
+  /** 保存済みの場合に表示する5軸スコア */
+  scores?: DailyScores;
+  /** 保存済みの場合に表示するコメント */
+  comment?: string;
   emptyMessage?: string;
 };
 
-const LABELS: Record<ScoreKey, string> = {
+type ScoreRow = {
+  key: ScoreKey;
+  label: string;
+  value: number;
+};
+
+const SCORE_LABELS: Record<ScoreKey, string> = {
   antioxidant: "抗酸化",
   mineral: "ミネラル",
   fiber: "食物繊維",
@@ -20,84 +29,96 @@ const LABELS: Record<ScoreKey, string> = {
   variety: "バラエティ",
 };
 
+const SCORE_DISPLAY_ORDER: ScoreKey[] = [
+  "antioxidant",
+  "mineral",
+  "fiber",
+  "vitamin",
+  "variety",
+];
+
+const SCORE_APPEAR_ANIMATION_MS = 450;
+const DEFAULT_EMPTY_MESSAGE = "保存するとスコアが表示されます";
+
+function buildScoreRows(scores?: DailyScores): ScoreRow[] {
+  return SCORE_DISPLAY_ORDER.map((scoreKey) => ({
+    key: scoreKey,
+    label: SCORE_LABELS[scoreKey],
+    value: scores?.[scoreKey] ?? 0,
+  }));
+}
+
+function getScoreTitle(dateLabel?: string): string {
+  return dateLabel ? `${dateLabel} のスコア` : "今日のスコア";
+}
+
 export default function TodayScore({
   isSaved,
   dateLabel,
   scores,
   comment,
-  emptyMessage = "保存するとスコアが表示されます",
+  emptyMessage = DEFAULT_EMPTY_MESSAGE,
 }: TodayScoreProps) {
-  // 保存済みになったタイミングでアニメ演出
-  const [animateIn, setAnimateIn] = useState(false);
+  const [isAnimatingIn, setIsAnimatingIn] = useState(false);
 
   useEffect(() => {
     if (!isSaved) {
-      setAnimateIn(false);
+      setIsAnimatingIn(false);
       return;
     }
-    setAnimateIn(true);
-    const t = setTimeout(() => setAnimateIn(false), 450);
-    return () => clearTimeout(t);
+
+    setIsAnimatingIn(true);
+
+    const timerId = window.setTimeout(() => {
+      setIsAnimatingIn(false);
+    }, SCORE_APPEAR_ANIMATION_MS);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
   }, [isSaved, dateLabel]);
 
-  const rows = useMemo(() => {
-    const order: ScoreKey[] = [
-      "antioxidant",
-      "mineral",
-      "fiber",
-      "vitamin",
-      "variety",
-    ];
-    return order.map((k) => ({
-      key: k,
-      label: LABELS[k],
-      value: scores?.[k] ?? 0,
-    }));
-  }, [scores]);
+  const scoreRows = useMemo(() => buildScoreRows(scores), [scores]);
+
+  const containerClassName = [
+    "rounded-2xl border border-border bg-card shadow-sm",
+    "transition-all duration-300 ease-out",
+    isSaved && isAnimatingIn
+      ? "translate-y-2 opacity-0"
+      : "translate-y-0 opacity-100",
+  ].join(" ");
 
   return (
-    <div
-      className={[
-        "rounded-2xl border border-border bg-card shadow-sm",
-        "transition-all duration-300 ease-out",
-        isSaved
-          ? animateIn
-            ? "opacity-0 translate-y-2"
-            : "opacity-100 translate-y-0"
-          : "opacity-100 translate-y-0",
-      ].join(" ")}
-    >
+    <div className={containerClassName}>
       <div className="p-5">
-        {/* 見出し「M/D（W）のスコア」 */}
         <div className="text-center">
           <div className="text-xl font-semibold text-card-foreground">
-            {dateLabel ? `${dateLabel} のスコア` : "今日のスコア"}
+            {getScoreTitle(dateLabel)}
           </div>
         </div>
 
         {!isSaved ? (
-          <div className="mt-4 rounded-xl bg-muted px-3 py-3 text-sm text-card-foreground text-center">
+          <div className="mt-4 rounded-xl bg-muted px-3 py-3 text-center text-sm text-card-foreground">
             {emptyMessage}
           </div>
         ) : (
           <>
             <div className="mt-5 text-center">
-              <div className="inline-block min-w-[240px] px-4 space-y-2">
-                {rows.map((r) => (
+              <div className="inline-block min-w-[240px] space-y-2 px-4">
+                {scoreRows.map((scoreRow) => (
                   <div
-                    key={r.key}
+                    key={scoreRow.key}
                     className="flex items-center gap-2 text-left"
                   >
                     <div className="w-[72px] shrink-0 text-left text-sm font-semibold text-card-foreground">
-                      {r.label}
+                      {scoreRow.label}
                     </div>
-                    <ScoreStars value={r.value} />
+                    <ScoreStars value={scoreRow.value} />
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* コメント */}
             {comment ? (
               <div className="mt-4 rounded-xl bg-muted px-3 py-2 text-sm text-card-foreground">
                 <div className="text-xs font-semibold text-muted-foreground">

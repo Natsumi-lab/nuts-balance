@@ -21,8 +21,6 @@ type CharacterStreakProps = {
 
 type EvolutionPhase = "idle" | "holdOld" | "fade" | "settle";
 
-const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"] as const;
-
 const CARD_MAX_WIDTH_CLASS = "max-w-[280px]";
 
 const HOLD_OLD_DURATION_MS = 260;
