@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+const PROTECTED_PATHS = ["/app", "/report", "/nuts", "/settings"];
+const LOGIN_PATH = "/auth/login";
+
 type CookiesToSet = Array<{
   name: string;
   value: string;
@@ -9,8 +12,6 @@ type CookiesToSet = Array<{
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
-
-  // redirect時に引き継ぐため、Supabaseが要求する形のまま退避
   const cookiesToSet: CookiesToSet = [];
 
   const supabase = createServerClient(
@@ -26,26 +27,25 @@ export async function middleware(request: NextRequest) {
           });
         },
       },
-    }
+    },
   );
 
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const protectedPaths = ["/app", "/report", "/nuts", "/settings"];
-  const isProtectedRoute = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
+  const pathname = request.nextUrl.pathname;
+  const isProtectedRoute = PROTECTED_PATHS.some((path) =>
+    pathname.startsWith(path),
   );
 
   if (!session && isProtectedRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = LOGIN_PATH;
 
-    const redirectResponse = NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(loginUrl);
 
     cookiesToSet.forEach(({ name, value, options }) => {
-      // 3引数のオーバーロードを使う（型が安定する）
       redirectResponse.cookies.set(name, value, options);
     });
 
