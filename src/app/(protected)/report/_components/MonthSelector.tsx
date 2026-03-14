@@ -1,16 +1,34 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
 
 type MonthSelectorProps = {
-  currentYearMonth: string; // YYYY-MM形式
+  currentYearMonth: string; // YYYY-MM
 };
+
+const REPORT_PATH = "/report";
+const MONTH_QUERY_KEY = "month";
+
+/**
+ * Date → YYYY-MM
+ */
+function formatYearMonth(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+/**
+ * URLの month クエリを更新
+ */
+function buildMonthUrl(searchParams: URLSearchParams, nextMonth: string) {
+  const params = new URLSearchParams(searchParams.toString());
+  params.set(MONTH_QUERY_KEY, nextMonth);
+  return `${REPORT_PATH}?${params.toString()}`;
+}
 
 /**
  * 月切り替えUI
- * - 前月 / 次月ボタン
- * - 現在の年月表示
  */
 export default function MonthSelector({
   currentYearMonth,
@@ -18,41 +36,36 @@ export default function MonthSelector({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 年月をパース
   const [year, month] = currentYearMonth.split("-").map(Number);
 
-  // 月を日本語で表示
   const displayText = `${year}年${month}月`;
 
-  // 前月への遷移
-  const goToPrevMonth = useCallback(() => {
-    const prevDate = new Date(year, month - 2, 1); // month-1-1 = month-2
-    const prevYearMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("month", prevYearMonth);
-    router.push(`/report?${params.toString()}`);
-  }, [year, month, searchParams, router]);
+  function changeMonth(offset: number) {
+    const date = new Date(year, month - 1 + offset, 1);
+    const nextMonth = formatYearMonth(date);
+    const url = buildMonthUrl(searchParams, nextMonth);
 
-  // 次月への遷移
-  const goToNextMonth = useCallback(() => {
-    const nextDate = new Date(year, month, 1); // month+1-1 = month
-    const nextYearMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("month", nextYearMonth);
-    router.push(`/report?${params.toString()}`);
-  }, [year, month, searchParams, router]);
+    router.push(url);
+  }
 
-  // 今月かどうか（次月ボタンを無効化するため）
+  function goToPrevMonth() {
+    changeMonth(-1);
+  }
+
+  function goToNextMonth() {
+    changeMonth(1);
+  }
+
   const now = new Date();
   const isCurrentMonth =
     year === now.getFullYear() && month === now.getMonth() + 1;
 
   return (
     <div className="flex items-center justify-center gap-4">
-      {/* 前月ボタン */}
+      {/* 前月 */}
       <button
         onClick={goToPrevMonth}
-        className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-[#E6E6E4] shadow-sm hover:bg-[#F6F7F6] transition-colors"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E6E6E4] bg-white shadow-sm transition-colors hover:bg-[#F6F7F6]"
         aria-label="前月"
       >
         <svg
@@ -69,19 +82,19 @@ export default function MonthSelector({
         </svg>
       </button>
 
-      {/* 年月表示 */}
-      <div className="text-xl font-bold text-foreground min-w-[140px] text-center">
+      {/* 年月 */}
+      <div className="min-w-[140px] text-center text-xl font-bold text-foreground">
         {displayText}
       </div>
 
-      {/* 次月ボタン */}
+      {/* 次月 */}
       <button
         onClick={goToNextMonth}
         disabled={isCurrentMonth}
-        className={`flex items-center justify-center w-10 h-10 rounded-full border shadow-sm transition-colors ${
+        className={`flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors ${
           isCurrentMonth
-            ? "bg-[#F0F0F0] border-[#E0E0E0] cursor-not-allowed"
-            : "bg-white border-[#E6E6E4] hover:bg-[#F6F7F6]"
+            ? "cursor-not-allowed border-[#E0E0E0] bg-[#F0F0F0]"
+            : "border-[#E6E6E4] bg-white hover:bg-[#F6F7F6]"
         }`}
         aria-label="次月"
       >

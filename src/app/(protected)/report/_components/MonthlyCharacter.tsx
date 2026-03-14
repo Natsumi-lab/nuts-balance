@@ -18,18 +18,19 @@ type MonthlyCharacterProps = {
   maxStreak: number;
 };
 
+const STAGE_BACKGROUNDS: Record<GrowthStage, string> = {
+  1: "from-[#F8F7F5] via-[#F5F4F2] to-[#EFEEEC]",
+  2: "from-[#F5F9F7] via-[#EFF5F2] to-[#E8F0EB]",
+  3: "from-[#F2F8F5] via-[#E8F3ED] to-[#DEF0E6]",
+  4: "from-[#EEF7F3] via-[#E2F2E9] to-[#D4ECDF]",
+  5: "from-[#E8F5EF] via-[#D8EDE3] to-[#C8E6D6]",
+};
+
 /**
- * ステージに応じた背景グラデーションを返す
+ * ステージ背景グラデーション
  */
-function getStageBackground(stage: GrowthStage): string {
-  const backgrounds: Record<GrowthStage, string> = {
-    1: "from-[#F8F7F5] via-[#F5F4F2] to-[#EFEEEC]",
-    2: "from-[#F5F9F7] via-[#EFF5F2] to-[#E8F0EB]",
-    3: "from-[#F2F8F5] via-[#E8F3ED] to-[#DEF0E6]",
-    4: "from-[#EEF7F3] via-[#E2F2E9] to-[#D4ECDF]",
-    5: "from-[#E8F5EF] via-[#D8EDE3] to-[#C8E6D6]",
-  };
-  return backgrounds[stage];
+function getStageBackground(stage: GrowthStage) {
+  return STAGE_BACKGROUNDS[stage];
 }
 
 export default function MonthlyCharacter({
@@ -42,45 +43,42 @@ export default function MonthlyCharacter({
 
   const characterId = getCharacterIdByMonth(month);
   const imageSrc = getCharacterImageSrc(characterId, stage);
-
   const bgGradient = getStageBackground(stage);
 
   return (
     <div className="px-4 py-4">
       <div className="flex flex-col items-center gap-4">
-        {/* キャラクター表示エリア */}
+        {/* キャラクター */}
         <div
           className={`
-            relative w-full max-w-[280px] aspect-[3/4]
+            relative aspect-[3/4] w-full max-w-[280px]
+            overflow-hidden rounded-2xl border border-[#E8E8E6]
             bg-gradient-to-b ${bgGradient}
-            rounded-2xl shadow-sm border border-[#E8E8E6] overflow-hidden
-            transition-all duration-500
+            shadow-sm transition-all duration-500
           `}
         >
           {/* ビネット */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="pointer-events-none absolute inset-0"
             style={{
               background:
                 "radial-gradient(120% 95% at 50% 40%, rgba(255,255,255,0.0) 0%, rgba(0,0,0,0.05) 62%, rgba(0,0,0,0.12) 100%)",
             }}
           />
 
-          {/* キャラクター画像 */}
           <div className="absolute inset-0 p-4">
-            <div className="relative w-full h-full">
+            <div className="relative h-full w-full">
               {/* 接地影 */}
               <div
-                className={`
+                className="
                   absolute left-1/2 bottom-[14%] -translate-x-1/2
-                  w-[62%] h-[10%]
-                  rounded-full
-                  blur-[14px]
-                  bg-black/15
-                  opacity-60
-                `}
+                  h-[10%] w-[62%]
+                  rounded-full bg-black/15
+                  blur-[14px] opacity-60
+                "
               />
 
+              {/* キャラクター画像 */}
               <div className="absolute inset-0 animate-character-breathe">
                 <Image
                   src={imageSrc}
@@ -94,26 +92,31 @@ export default function MonthlyCharacter({
             </div>
           </div>
 
-          {/* ステージ背景のノイズ */}
+          {/* ノイズ */}
           <div
-            className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            className="pointer-events-none absolute inset-0 opacity-[0.03]"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
             }}
           />
         </div>
 
-        {/* 成長メーター */}
+        {/* 成長アイコン */}
         <div className="flex flex-col items-center gap-1">
           <div className="flex items-center gap-0.5 text-lg">
-            {GROWTH_ICONS.map((icon, index) => {
-              const filled = index < stage;
+            {GROWTH_ICONS.map((icon, iconIndex) => {
+              const filled = iconIndex < stage;
+
               return (
                 <span
-                  key={index}
+                  key={iconIndex}
                   className={`
                     transition-all duration-300
-                    ${filled ? "opacity-100 scale-100" : "opacity-25 scale-90 grayscale"}
+                    ${
+                      filled
+                        ? "opacity-100 scale-100"
+                        : "opacity-25 scale-90 grayscale"
+                    }
                   `}
                 >
                   {icon}
@@ -134,15 +137,15 @@ export default function MonthlyCharacter({
           </div>
         </div>
 
-        {/* 進捗バー */}
-        <div className="w-full max-w-[280px] rounded-2xl bg-white/80 border border-[#EDEDED] shadow-sm p-4">
+        {/* 進捗 */}
+        <div className="w-full max-w-[280px] rounded-2xl border border-[#EDEDED] bg-white/80 p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-center text-sm font-semibold text-[#333]">
+            <div className="min-w-0 flex-1 text-center">
+              <div className="text-sm font-semibold text-[#333]">
                 {isMaxStage ? "最大成長達成！" : "次の成長まで"}
               </div>
 
-              <div className="mt-2 text-center text-xs text-[#666] leading-relaxed">
+              <div className="mt-2 text-xs leading-relaxed text-[#666]">
                 {isMaxStage ? (
                   <p className="mx-auto max-w-[20ch]">
                     素晴らしい！今月は最大まで成長しました。
@@ -159,12 +162,13 @@ export default function MonthlyCharacter({
               </div>
             </div>
 
-            <div className="shrink-0 text-xs font-semibold text-[#4B5563] bg-[#F7F7F5] border border-[#EEEDE9] rounded-full px-2 py-1">
+            <div className="shrink-0 rounded-full border border-[#EEEDE9] bg-[#F7F7F5] px-2 py-1 text-xs font-semibold text-[#4B5563]">
               {progressPct}%
             </div>
           </div>
 
-          <div className="mt-3 h-3 w-full rounded-full bg-[#F2F2EF] border border-[#ECEBE6] overflow-hidden">
+          {/* プログレスバー */}
+          <div className="mt-3 h-3 w-full overflow-hidden rounded-full border border-[#ECEBE6] bg-[#F2F2EF]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[#7DD3FC] to-[#60A5FA] shadow-[inset_0_-1px_0_rgba(255,255,255,0.35)]"
               style={{ width: `${progressPct}%` }}
@@ -181,11 +185,11 @@ export default function MonthlyCharacter({
           )}
         </div>
 
-        {/* 月内最大ストリーク */}
-        <div className="w-full max-w-[280px] bg-white/80 rounded-2xl shadow-sm border border-[#F0E8E6] px-4 py-3">
-          <div className="flex flex-col items-center text-center gap-1">
-            <div className="text-xs text-[#666] flex items-center gap-2">
-              <span className="text-[#E05A4A] animate-pulse-slow">
+        {/* 最大ストリーク */}
+        <div className="w-full max-w-[280px] rounded-2xl border border-[#F0E8E6] bg-white/80 px-4 py-3 shadow-sm">
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-2 text-xs text-[#666]">
+              <span className="animate-pulse-slow text-[#E05A4A]">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4"
@@ -199,6 +203,7 @@ export default function MonthlyCharacter({
                   />
                 </svg>
               </span>
+
               <span>今月の最大連続記録</span>
             </div>
 

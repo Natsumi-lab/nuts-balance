@@ -14,11 +14,14 @@ import {
 import type { NutConsumptionData } from "@/lib/domain/report";
 
 type NutConsumptionChartProps = {
-  data: NutConsumptionData[]; // ナッツ別の消費日数データ
-  maxDays: number; // 対象月の日数（Y軸の最大値）
+  data: NutConsumptionData[];
+  maxDays: number;
 };
 
-// ナッツごとの色（ライト/ダーク共通で使用）
+const CHART_HEIGHT = 260;
+const MIN_Y_MAX = 5;
+
+// ナッツごとの色
 const NUT_COLORS: Record<string, string> = {
   アーモンド: "#C9A66B",
   くるみ: "#8B7355",
@@ -28,10 +31,8 @@ const NUT_COLORS: Record<string, string> = {
   ヘーゼルナッツ: "#CD853F",
 };
 
-// デフォルト色
 const DEFAULT_COLOR = "#9FBFAF";
 
-// ナッツ別消費日数の棒グラフ
 export default function NutConsumptionChart({
   data,
   maxDays,
@@ -39,68 +40,48 @@ export default function NutConsumptionChart({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  /**
-   * グラフ描画エリアの参照
-   *
-   * この要素の実際の幅を取得して、
-   * BarChart の width にそのまま渡す。
-   */
   const containerRef = useRef<HTMLDivElement | null>(null);
-
-  /**
-   * 計測した描画幅
-   *
-   * 初回は null にしておき、
-   * 親要素の幅が確定したあとに更新する。
-   */
   const [chartWidth, setChartWidth] = useState<number | null>(null);
 
   /**
-   * 親要素の幅を監視する処理
-   *
-   * レイアウト変化や画面サイズ変更に合わせて
-   * グラフ幅を再計測する。
+   * グラフ描画幅の監視
    */
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const element = containerRef.current;
+    if (!element) return;
 
     const updateWidth = () => {
-      const nextWidth = Math.floor(el.getBoundingClientRect().width);
-      if (nextWidth > 0) {
-        setChartWidth(nextWidth);
+      const width = Math.floor(element.getBoundingClientRect().width);
+      if (width > 0) {
+        setChartWidth(width);
       }
     };
 
     updateWidth();
 
-    const observer = new ResizeObserver(() => {
-      updateWidth();
-    });
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
 
-    observer.observe(el);
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
-  // テーマに応じた色設定
-  const gridColor = isDark ? "#3a4a40" : "#E8E8E8";
-  const axisColor = isDark ? "#4a5a50" : "#E0E0E0";
-  const tickColor = isDark ? "#9aa89e" : "#555";
-  const tooltipBg = isDark ? "#2a3a30" : "#FAFAFA";
-  const tooltipBorder = isDark ? "#4a5a50" : "#E0E0E0";
+  const themeColors = {
+    grid: isDark ? "#3a4a40" : "#E8E8E8",
+    axis: isDark ? "#4a5a50" : "#E0E0E0",
+    tick: isDark ? "#9aa89e" : "#555",
+    tooltipBg: isDark ? "#2a3a30" : "#FAFAFA",
+    tooltipBorder: isDark ? "#4a5a50" : "#E0E0E0",
+  };
 
-  // すべて0日の場合
   const allZero = data.every((item) => item.days === 0);
+  const yMax = Math.max(maxDays, MIN_Y_MAX);
 
-  // Y軸は最低でも5まで表示して見やすさを保つ
-  const yMax = Math.max(maxDays, 5);
+  const isChartReady = chartWidth !== null && chartWidth > 0;
 
   return (
     <div className="rounded-2xl border border-border bg-card shadow-sm">
       <div className="p-4 md:p-5">
+        {/* タイトル */}
         <div className="mb-4 text-center">
           <div className="text-xl font-semibold text-card-foreground">
             ナッツ別 食べた日数
@@ -108,28 +89,30 @@ export default function NutConsumptionChart({
         </div>
 
         {allZero ? (
-          <div className="flex h-[200px] items-center justify-center">
+          <div className="flex items-center justify-center h-[200px]">
             <div className="text-sm text-muted-foreground">
               記録がありません
             </div>
           </div>
         ) : (
-          // グラフ描画エリア
-          <div ref={containerRef} className="h-[260px] w-full min-w-0">
-            {chartWidth !== null && chartWidth > 0 ? (
+          <div ref={containerRef} className="w-full min-w-0 h-[260px]">
+            {isChartReady ? (
               <BarChart
                 width={chartWidth}
-                height={260}
+                height={CHART_HEIGHT}
                 data={data}
                 margin={{ top: 10, right: 8, left: 0, bottom: 28 }}
                 barCategoryGap="18%"
               >
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={themeColors.grid}
+                />
 
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 10, fill: tickColor }}
-                  axisLine={{ stroke: axisColor }}
+                  tick={{ fontSize: 10, fill: themeColors.tick }}
+                  axisLine={{ stroke: themeColors.axis }}
                   tickLine={false}
                   interval={0}
                   angle={0}
@@ -140,8 +123,8 @@ export default function NutConsumptionChart({
 
                 <YAxis
                   domain={[0, yMax]}
-                  tick={{ fontSize: 11, fill: tickColor }}
-                  axisLine={{ stroke: axisColor }}
+                  tick={{ fontSize: 11, fill: themeColors.tick }}
+                  axisLine={{ stroke: themeColors.axis }}
                   tickLine={false}
                   allowDecimals={false}
                   tickCount={5}
@@ -152,18 +135,18 @@ export default function NutConsumptionChart({
                   formatter={(value) => [`${value}日`, "食べた日数"]}
                   labelFormatter={(label) => label}
                   contentStyle={{
-                    backgroundColor: tooltipBg,
-                    border: `1px solid ${tooltipBorder}`,
+                    backgroundColor: themeColors.tooltipBg,
+                    border: `1px solid ${themeColors.tooltipBorder}`,
                     borderRadius: "8px",
                     fontSize: "12px",
-                    color: tickColor,
+                    color: themeColors.tick,
                   }}
                 />
 
                 <Bar dataKey="days" radius={[4, 4, 0, 0]} maxBarSize={36}>
-                  {data.map((entry, index) => (
+                  {data.map((entry) => (
                     <Cell
-                      key={`bar-segment-${index}`}
+                      key={entry.nutId}
                       fill={NUT_COLORS[entry.name] ?? DEFAULT_COLOR}
                     />
                   ))}
@@ -175,8 +158,8 @@ export default function NutConsumptionChart({
           </div>
         )}
 
+        {/* 凡例 */}
         {!allZero && (
-          // 凡例
           <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs">
             {data.map((item) => (
               <div key={item.nutId} className="flex items-center gap-1">
