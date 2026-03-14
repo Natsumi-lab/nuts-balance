@@ -1,22 +1,18 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  // ダークモードは「class方式」：.dark が付いた要素配下で dark: が有効
   darkMode: ["class", ".dark"],
 
-  // Tailwind がクラスを抽出する対象ファイル
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
 
   theme: {
     extend: {
-      // shadcn/ui 等で使う radius を CSS 変数で統一
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
 
-      // globals.css で定義した CSS 変数（HSL）を Tailwind の色として利用
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

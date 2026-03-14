@@ -4,29 +4,26 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-type Props = {
+type SplashProps = {
   nextPath: string;
 };
 
-export default function Splash({ nextPath }: Props) {
+const SPLASH_DELAY_MS = 800;
+
+export default function Splash({ nextPath }: SplashProps) {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace(nextPath);
-    }, 800);
+    }, SPLASH_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, [router, nextPath]);
 
   return (
     <main className="flex min-h-[100dvh] items-center justify-center">
-      <div
-        className={[
-          "flex flex-col items-center opacity-0",
-          "animate-[fadeIn_0.9s_ease-out_forwards]",
-        ].join(" ")}
-      >
+      <div className="flex flex-col items-center opacity-0 animate-[fadeIn_0.9s_ease-out_forwards]">
         <Image
           src="/nuts/logo.png"
           alt="Nuts Balance"
