@@ -6,30 +6,61 @@ export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
 
+const LOCAL_SITE_URL = "http://localhost:3000";
+const AUTH_CALLBACK_PATH = "/auth/callback";
+
+/**
+ * アプリのベースURLを返す
+ */
 function getSiteUrl(): string {
-  // Vercel 環境では自動で VERCEL_URL が注入される
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
 
-  // 任意で手動指定（将来本番ドメインを設定する場合）
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit && explicit.trim().length > 0) {
-    return explicit.replace(/\/$/, "");
+  const explicitSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitSiteUrl && explicitSiteUrl.trim().length > 0) {
+    return explicitSiteUrl.replace(/\/$/, "");
   }
 
-  // ローカル開発時のフォールバック
-  return "http://localhost:3000";
+  return LOCAL_SITE_URL;
 }
 
-// メールアドレス変更 Server Action
+/**
+ * メール変更後のリダイレクト先URLを返す
+ */
+function getEmailRedirectUrl(): string {
+  return `${getSiteUrl()}${AUTH_CALLBACK_PATH}`;
+}
 
+/**
+ * Supabaseエラーをユーザー向けメッセージに変換する
+ */
+function getEmailUpdateErrorMessage(errorMessage: string): string {
+  const normalizedMessage = errorMessage.toLowerCase();
+
+  if (normalizedMessage.includes("already registered")) {
+    return "このメールアドレスは既に登録されています";
+  }
+
+  if (normalizedMessage.includes("rate limit")) {
+    return "しばらく時間をおいてから再度お試しください";
+  }
+
+  if (normalizedMessage.includes("invalid")) {
+    return "無効なメールアドレスです";
+  }
+
+  return "メールアドレスの変更に失敗しました";
+}
+
+/**
+ * メールアドレス変更
+ */
 export async function updateUserEmailAction(
-  newEmail: string
+  newEmail: string,
 ): Promise<ActionResult> {
   const supabase = await createClient();
 
-  // 認証チェック（サーバー側で実施）
   const {
     data: { user },
     error: userError,
@@ -39,40 +70,15 @@ export async function updateUserEmailAction(
     return { success: false, error: "認証エラーが発生しました" };
   }
 
-  // メール変更リクエストを実行（確認メールは /auth/callback へリダイレクト）
-  const { error } = await supabase.auth.updateUser(
+  const { error: updateError } = await supabase.auth.updateUser(
     { email: newEmail },
-    { emailRedirectTo: `${getSiteUrl()}/auth/callback` }
+    { emailRedirectTo: getEmailRedirectUrl() },
   );
 
-  if (error) {
-    // Supabase のエラーメッセージをユーザー向けに整形
-    const msg = error.message.toLowerCase();
-
-    if (msg.includes("already registered")) {
-      return {
-        success: false,
-        error: "このメールアドレスは既に登録されています",
-      };
-    }
-
-    if (msg.includes("rate limit")) {
-      return {
-        success: false,
-        error: "しばらく時間をおいてから再度お試しください",
-      };
-    }
-
-    if (msg.includes("invalid")) {
-      return {
-        success: false,
-        error: "無効なメールアドレスです",
-      };
-    }
-
+  if (updateError) {
     return {
       success: false,
-      error: "メールアドレスの変更に失敗しました",
+      error: getEmailUpdateErrorMessage(updateError.message),
     };
   }
 
