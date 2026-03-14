@@ -5,34 +5,43 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/app/actions/auth";
 
+type NavItem = {
+  href: string;
+  label: string;
+  activePath: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/app", label: "記録", activePath: "/app" },
+  { href: "/report", label: "レポート", activePath: "/app/report" },
+  { href: "/nuts", label: "ナッツ知識", activePath: "/app/nuts" },
+  { href: "/settings", label: "設定", activePath: "/app/settings" },
+];
+
+const BASE_BUTTON =
+  "min-w-[96px] px-4 py-2 rounded-2xl text-sm text-center font-medium whitespace-nowrap";
+
+const BASE_STYLE =
+  "transition-all duration-200 ease-out " +
+  "bg-gradient-to-b from-[#FFF1B8] via-[#FFE08A] to-[#F7C948] text-[#6B4E00] " +
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_14px_rgba(0,0,0,0.16)] " +
+  "hover:-translate-y-1 " +
+  "hover:bg-gradient-to-b hover:from-[#FBE38E] hover:via-[#F4B24E] hover:to-[#E98A3F] " +
+  "hover:text-white " +
+  "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_24px_rgba(233,138,63,0.4)]";
+
+const ACTIVE_STYLE = BASE_STYLE + " font-semibold";
+const INACTIVE_STYLE = BASE_STYLE;
+
 export default function NavBar() {
   const pathname = usePathname();
 
-  const isActive = (path: string) => {
-    if (path === "/app" && pathname === "/app") return true;
-    if (path !== "/app" && pathname.startsWith(path)) return true;
-    return false;
-  };
-
-  // 共通ベース
-  const base =
-    "min-w-[96px] px-4 py-2 rounded-2xl text-sm text-center font-medium whitespace-nowrap";
-
-  // 共通スタイル
-  const baseStyle =
-    "transition-all duration-200 ease-out " +
-    "bg-gradient-to-b from-[#FFF1B8] via-[#FFE08A] to-[#F7C948] text-[#6B4E00] " +
-    "shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_14px_rgba(0,0,0,0.16)] " +
-    "hover:-translate-y-1 " +
-    "hover:bg-gradient-to-b hover:from-[#FBE38E] hover:via-[#F4B24E] hover:to-[#E98A3F] " +
-    "hover:text-white " +
-    "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_12px_24px_rgba(233,138,63,0.4)]";
-
-  // 非アクティブ
-  const inactive = baseStyle;
-
-  // アクティブ
-  const active = baseStyle + " font-semibold";
+  function isActive(path: string) {
+    if (path === "/app") {
+      return pathname === "/app";
+    }
+    return pathname.startsWith(path);
+  }
 
   return (
     <header className="sticky top-0 z-10 border-b border-[#F2E8C9] bg-white dark:border-border dark:bg-card">
@@ -62,7 +71,6 @@ export default function NavBar() {
             </div>
           </div>
 
-          {/* テキストロゴ */}
           <span
             className="
               text-2xl leading-none text-[#333] dark:text-foreground
@@ -76,52 +84,37 @@ export default function NavBar() {
           </span>
         </Link>
 
-        {/* ナビ（横スクロール対応） */}
+        {/* ナビ */}
         <nav className="flex items-center">
           <div className="flex gap-3 overflow-x-auto overflow-y-visible py-3 pr-6 pb-6">
-            <Link
-              href="/app"
-              className={`${base} ${isActive("/app") ? active : inactive}`}
-            >
-              記録
-            </Link>
-
-            <Link
-              href="/report"
-              className={`${base} ${isActive("/app/report") ? active : inactive}`}
-            >
-              レポート
-            </Link>
-
-            <Link
-              href="/nuts"
-              className={`${base} ${isActive("/app/nuts") ? active : inactive}`}
-            >
-              ナッツ知識
-            </Link>
-
-            <Link
-              href="/settings"
-              className={`${base} ${isActive("/app/settings") ? active : inactive}`}
-            >
-              設定
-            </Link>
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`${BASE_BUTTON} ${
+                  isActive(item.activePath) ? ACTIVE_STYLE : INACTIVE_STYLE
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
 
             {/* ログアウト */}
             <form action={logoutAction}>
               <button
                 type="submit"
                 className="
-                    min-w-[96px] rounded-xl px-4 py-2 text-sm font-medium
-                    bg-gradient-to-b from-[#EFF6FF] via-[#DBEAFE] to-[#BFDBFE]
-                    text-[#1E40AF]
-                    shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_10px_rgba(30,64,175,0.18)]
-                    ring-1 ring-blue-300/50
-                    transition-all duration-200 ease-out
-                    hover:-translate-y-0.5
-                    hover:bg-gradient-to-b hover:from-[#DBEAFE] hover:to-[#93C5FD]
-                    hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_8px_18px_rgba(30,64,175,0.28)]
-                    active:translate-y-0 active:shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_3px_6px_rgba(30,64,175,0.22)] "
+                  min-w-[96px] rounded-xl px-4 py-2 text-sm font-medium
+                  bg-gradient-to-b from-[#EFF6FF] via-[#DBEAFE] to-[#BFDBFE]
+                  text-[#1E40AF]
+                  shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_4px_10px_rgba(30,64,175,0.18)]
+                  ring-1 ring-blue-300/50
+                  transition-all duration-200 ease-out
+                  hover:-translate-y-0.5
+                  hover:bg-gradient-to-b hover:from-[#DBEAFE] hover:to-[#93C5FD]
+                  hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_8px_18px_rgba(30,64,175,0.28)]
+                  active:translate-y-0 active:shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_3px_6px_rgba(30,64,175,0.22)]
+                "
               >
                 ログアウト
               </button>
