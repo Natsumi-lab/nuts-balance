@@ -4,75 +4,79 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { ActionResult } from '@/lib/types';
 
+const YMD_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
 function getJstTodayYmd(): string {
-  const now = Date.now();
-  const jst = new Date(now + 9 * 60 * 60 * 1000);
+  const jst = new Date(Date.now() + JST_OFFSET_MS);
   return jst.toISOString().slice(0, 10);
 }
 
+function validateYmd(date: string): boolean {
+  return YMD_REGEX.test(date);
+}
+
+function normalizeNutIds(nutIds: Array<number | string>): number[] {
+  return nutIds
+    .map((v) => (typeof v === 'string' ? Number(v) : v))
+    .filter(Number.isFinite);
+}
+
+async function requireUser() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error('auth.getUser error:', error);
+  }
+
+  if (!user) {
+    return { supabase: null, user: null };
+  }
+
+  return { supabase, user };
+}
+
 /**
- * 日々のナッツ記録を保存する Server Action
+ * 日々のナッツ記録を保存する
  *
- * - 同一ユーザー × 同一日付では daily_logs を 1 行だけ保持
- * - daily_log_items は「全削除 → 再 insert」で同期
- * - RLS 前提で user_id は auth.uid() と一致する必要あり
- *
- * @param date - 記録する日付（YYYY-MM-DD形式）
- * @param nutIds - 選択されたナッツID配列（DBでは bigint）
- * @returns 成功可否とメッセージ
+ * 仕様
+ * - daily_logs は「ユーザー × 日付」で1行
+ * - daily_log_items は毎回全同期
+ * - RLS により user_id = auth.uid() が必須
  */
 export async function upsertDailyLog(
   date: string,
   nutIds: Array<number | string>
 ): Promise<ActionResult> {
   try {
-    const supabase = await createClient();
+    const { supabase, user } = await requireUser();
 
-    // -----------------------------
-    // 1. 認証ユーザー取得
-    // -----------------------------
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-      console.error('auth.getUser error:', userError);
-    }
-
-    if (!user) {
+    if (!user || !supabase) {
       return { success: false, message: 'ログインが必要です' };
     }
 
-    // -----------------------------
-    // 2. 日付バリデーション
-    // -----------------------------
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!validateYmd(date)) {
       return { success: false, message: '日付の形式が不正です' };
     }
 
-    // -----------------------------
-    // 3. nutIds を number に正規化
-    // -----------------------------
-    const nutIdsNum = nutIds
-      .map((v) => (typeof v === 'string' ? Number(v) : v))
-      .filter((v) => Number.isFinite(v)) as number[];
+    const normalizedNutIds = normalizeNutIds(nutIds);
 
-    //  未選択は保存不可（=「記録」とは摂取があった日）
-    if (nutIdsNum.length === 0) {
+    if (normalizedNutIds.length === 0) {
       return { success: false, message: 'ナッツを1つ以上選択してください' };
     }
 
-    // -----------------------------
-    // 4. RPC 実行
-    // -----------------------------
-    const { error: rpcError } = await supabase.rpc('upsert_daily_log', {
+    const { error } = await supabase.rpc('upsert_daily_log', {
       p_log_date: date,
-      p_nut_ids: nutIdsNum,
+      p_nut_ids: normalizedNutIds,
     });
 
-    if (rpcError) {
-      console.error('RPC 保存エラー:', rpcError);
+    if (error) {
+      console.error('RPC upsert_daily_log error:', error);
       return { success: false, message: '日誌の保存に失敗しました' };
     }
 
@@ -80,7 +84,7 @@ export async function upsertDailyLog(
 
     return { success: true, message: '保存しました' };
   } catch (error) {
-    console.error('Upsert error:', error);
+    console.error('upsertDailyLog unexpected error:', error);
     return { success: false, message: '予期せぬエラーが発生しました' };
   }
 }
@@ -88,54 +92,36 @@ export async function upsertDailyLog(
 /**
  * 「今日は食べなかった」
  *
- * - daily_logs は作らない（= 摂取があった日だけが「記録」）
- * - daily_skips に保存する（= 意図的に食べなかった日）
- * - 同日に daily_logs が存在していた場合は削除してスキップへ置換（DB側RPCで担保）
- * - ストリークは切れる（current_streak = 0）
- *
- * @param date - 対象日付（YYYY-MM-DD形式）
+ * 仕様
+ * - daily_logs は作らない
+ * - daily_skips に保存
+ * - 同日ログがあれば削除してスキップへ置換（RPC側で担保）
+ * - ストリークはリセット
  */
 export async function skipToday(date: string): Promise<ActionResult> {
   try {
-    const supabase = await createClient();
+    const { supabase, user } = await requireUser();
 
-    // -----------------------------
-    // 1. 認証ユーザー取得
-    // -----------------------------
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-      console.error('auth.getUser error:', userError);
-    }
-
-    if (!user) {
+    if (!user || !supabase) {
       return { success: false, message: 'ログインが必要です' };
     }
 
-    // -----------------------------
-    // 2. 日付バリデーション
-    // -----------------------------
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!validateYmd(date)) {
       return { success: false, message: '日付の形式が不正です' };
     }
 
     const todayYmd = getJstTodayYmd();
+
     if (date !== todayYmd) {
       return { success: false, message: 'スキップは今日のみ可能です' };
     }
 
-    // -----------------------------
-    // 3. RPC 実行（スキップ永続化）
-    // -----------------------------
-    const { error: rpcError } = await supabase.rpc('mark_daily_skip', {
+    const { error } = await supabase.rpc('mark_daily_skip', {
       p_log_date: date,
     });
 
-    if (rpcError) {
-      console.error('RPC スキップエラー:', rpcError);
+    if (error) {
+      console.error('RPC mark_daily_skip error:', error);
       return { success: false, message: 'スキップの保存に失敗しました' };
     }
 
@@ -143,7 +129,7 @@ export async function skipToday(date: string): Promise<ActionResult> {
 
     return { success: true, message: '今日は🥜食べませんでした' };
   } catch (error) {
-    console.error('Skip error:', error);
+    console.error('skipToday unexpected error:', error);
     return { success: false, message: 'スキップ処理中にエラーが発生しました' };
   }
 }

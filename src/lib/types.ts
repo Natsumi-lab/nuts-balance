@@ -1,5 +1,5 @@
 /**
- * ナッツマスター情報の型定義
+ * nuts テーブルの行データ
  */
 export type Nut = {
   id: number;
@@ -17,7 +17,7 @@ export type Nut = {
 };
 
 /**
- * 日誌の型定義
+ * daily_logs テーブルの行データ
  */
 export type DailyLog = {
   id: string;
@@ -28,7 +28,7 @@ export type DailyLog = {
 };
 
 /**
- * 日誌に記録されたナッツアイテムの型定義
+ * daily_log_items テーブルの行データ
  */
 export type DailyLogItem = {
   id: string;
@@ -38,7 +38,7 @@ export type DailyLogItem = {
 };
 
 /**
- * ユーザーのストリーク情報の型定義
+ * streaks テーブルの行データ
  */
 export type Streak = {
   user_id: string;
@@ -48,7 +48,9 @@ export type Streak = {
 };
 
 /**
- * 日付に基づいた日誌データの型定義
+ * ある1日分の記録表示・編集に必要なデータ
+ *
+ * selectedNutIds はフォーム値に合わせて string[] とする。
  */
 export type DailyLogData = {
   dailyLog: DailyLog | null;
@@ -56,7 +58,7 @@ export type DailyLogData = {
 };
 
 /**
- * Server Actionの結果の型定義
+ * Server Action の共通結果
  */
 export type ActionResult = {
   success: boolean;
