@@ -2,33 +2,46 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
+import "react-day-picker/style.css";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ja } from "date-fns/locale";
 
 type Props = {
-  selectedDate: string; // URLから渡される選択中の日付（YYYY-MM-DD）
-  recordedDates: string[]; // ナッツ摂取が記録されている日
-  skippedDates: string[]; // 「今日は食べなかった」が選択された日
+  selectedDate: string;
+  recordedDates: string[];
+  skippedDates: string[];
 };
 
+const APP_PATH = "/app";
+const DATE_QUERY_KEY = "date";
+const FIRST_DAY_OF_MONTH = "01";
+
 /**
- * YYYY-MM-DD → Date
- * ローカル時間の 00:00 に固定して日付ズレを防ぐ
+ * YYYY-MM-DD をローカル時刻の 00:00 の Date に変換する
  */
-function toDateAtLocalMidnight(ymd: string) {
+function toLocalDate(ymd: string): Date {
   return new Date(`${ymd}T00:00:00`);
 }
 
 /**
- * Date → YYYY-MM-DD（ローカル基準）
- * DayPicker から渡される Date を URL用文字列へ変換
+ * Date をローカル基準の YYYY-MM-DD に変換する
  */
-function toYmdLocal(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+function formatDateToYmd(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 指定した月の1日を YYYY-MM-DD で返す
+ */
+function formatMonthStart(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}-${FIRST_DAY_OF_MONTH}`;
 }
 
 export default function CalendarPicker({
@@ -39,93 +52,64 @@ export default function CalendarPicker({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  /**
-   * URLで指定された日付を Date に変換
-   * カレンダーの選択状態に使用
-   */
-  const selected = useMemo(
-    () => toDateAtLocalMidnight(selectedDate),
-    [selectedDate],
-  );
+  const selectedDay = useMemo(() => toLocalDate(selectedDate), [selectedDate]);
+  const [displayMonth, setDisplayMonth] = useState<Date>(selectedDay);
 
-  /**
-   * カレンダーに表示する月
-   * DayPicker の month を外部 state で制御する
-   */
-  const [month, setMonth] = useState<Date>(() => selected);
-
-  /**
-   * URLの日付が変わったら表示月も同期する
-   */
   useEffect(() => {
-    setMonth(selected);
-  }, [selected]);
+    setDisplayMonth(selectedDay);
+  }, [selectedDay]);
 
-  /**
-   * 記録日・スキップ日を Set に変換
-   * カレンダー描画時に「その日が該当するか」を高速に判定するため
-   */
-  const recordedSet = useMemo(() => new Set(recordedDates), [recordedDates]);
-  const skippedSet = useMemo(() => new Set(skippedDates), [skippedDates]);
+  const recordedDateSet = useMemo(
+    () => new Set(recordedDates),
+    [recordedDates],
+  );
+  const skippedDateSet = useMemo(() => new Set(skippedDates), [skippedDates]);
 
-  /**
-   * 月移動（< >）時の処理
-   *
-   * DayPicker の月変更だけでは Server Component が再実行されないため、
-   * URLの date クエリも更新してページデータを再取得する。
-   *
-   * 月変更時はその月の1日を date に設定する。
-   */
-  const onMonthChange = (nextMonth: Date) => {
-    setMonth(nextMonth);
-
-    const yyyy = nextMonth.getFullYear();
-    const mm = String(nextMonth.getMonth() + 1).padStart(2, "0");
-    const nextDate = `${yyyy}-${mm}-01`;
-
+  function pushDateToQuery(nextDate: string): void {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("date", nextDate);
-    router.push(`/app?${params.toString()}`);
-  };
+    params.set(DATE_QUERY_KEY, nextDate);
+    router.push(`${APP_PATH}?${params.toString()}`);
+  }
 
-  /**
-   * 日付クリック時の処理
-   *
-   * 選択された日付を URL に反映して
-   * ページ全体の表示をその日付に切り替える
-   */
-  const onSelect = (date?: Date) => {
-    if (!date) return;
+  function handleMonthChange(nextMonth: Date): void {
+    setDisplayMonth(nextMonth);
+    pushDateToQuery(formatMonthStart(nextMonth));
+  }
 
-    const nextDate = toYmdLocal(date);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("date", nextDate);
-    router.push(`/app?${params.toString()}`);
-  };
+  function handleDateSelect(date?: Date): void {
+    if (!date) {
+      return;
+    }
+
+    pushDateToQuery(formatDateToYmd(date));
+  }
 
   return (
     <div className="nb-calendar rounded-2xl border border-border bg-card/75 px-4 py-3 shadow-lg ring-1 ring-black/5 dark:ring-white/5">
       <style jsx global>{`
-        /* =========================================================
-           Nuts Balance Calendar (react-day-picker)
-        ========================================================= */
-        .nb-calendar .rdp {
-          margin: 0;
+        .nb-calendar .rdp-root {
+          width: fit-content;
+          margin: 0 auto;
+        }
+
+        .nb-calendar .rdp-months {
+          display: flex;
+          justify-content: center;
         }
 
         .nb-calendar .rdp-month {
           width: 100%;
+          max-width: 22rem;
           margin: 0;
         }
 
-        .nb-calendar .rdp-table {
+        .nb-calendar .rdp-month_grid {
           width: 100%;
-          table-layout: fixed;
           border-collapse: separate;
           border-spacing: 0;
         }
 
-        .nb-calendar .rdp-row {
+        .nb-calendar .rdp-week {
           height: 2.5rem;
         }
 
@@ -140,31 +124,32 @@ export default function CalendarPicker({
         }
 
         .nb-calendar .rdp-caption_label {
+          font-size: 0.95rem;
           font-weight: 800;
           letter-spacing: 0.02em;
           color: hsl(var(--primary));
-          font-size: 0.95rem;
         }
 
-        .nb-calendar .rdp-head_cell {
-          color: hsl(var(--muted-foreground));
-          font-weight: 800;
-          font-size: 0.75rem;
+        .nb-calendar .rdp-weekday {
           padding-bottom: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 800;
+          color: hsl(var(--muted-foreground));
+          text-align: center;
         }
 
         .nb-calendar .rdp-day {
+          position: relative;
           width: 2.45rem;
           height: 2.45rem;
+          margin: 0 auto;
           border-radius: 9999px;
           font-weight: 700;
           color: hsl(var(--card-foreground));
-          position: relative;
           transition:
             transform 160ms ease,
             box-shadow 160ms ease,
             background 160ms ease;
-          margin: 0 auto;
         }
 
         .nb-calendar .rdp-day:hover {
@@ -174,26 +159,10 @@ export default function CalendarPicker({
         }
 
         .nb-calendar .rdp-day:active {
-          transform: translateY(0px) scale(0.98);
+          transform: translateY(0) scale(0.98);
         }
 
-        .nb-calendar .rdp-tbody,
-        .nb-calendar .rdp-thead,
-        .nb-calendar .rdp-table {
-          width: 100%;
-        }
-
-        .nb-calendar .rdp-head_row,
-        .nb-calendar .rdp-row {
-          display: grid;
-          grid-template-columns: repeat(7, minmax(0, 1fr));
-        }
-
-        .nb-calendar .rdp-head_cell,
-        .nb-calendar .rdp-cell {
-          width: 100%;
-        }
-
+        .nb-calendar .rdp-selected .rdp-day,
         .nb-calendar .rdp-day[aria-selected="true"] {
           color: #fff !important;
           background: linear-gradient(
@@ -204,25 +173,13 @@ export default function CalendarPicker({
           box-shadow: 0 14px 24px rgba(96, 165, 250, 0.25) !important;
         }
 
+        .nb-calendar .rdp-today:not(.rdp-selected) .rdp-day,
         .nb-calendar .rdp-day_today:not([aria-selected="true"]) {
           background: hsl(var(--muted) / 0.92) !important;
           box-shadow: inset 0 0 0 2px hsl(var(--secondary) / 0.9);
         }
 
-        /* =========================================================
-           記録日 / スキップ日 マーカー
-           - react-day-picker v9 では modifiers の class が
-             「.rdp-day(ボタン)」ではなく「親要素(.rdp-cellなど)」に付く場合がある。
-           - そのため、どちらに付いても効くように “両対応セレクタ” を使う。
-        ========================================================= */
-
-        /* ----------------------------
-            記録がある日（摂取日）
-           ---------------------------- */
-
-        /* パターンA: class がボタン(.rdp-day)に付く場合 */
         .nb-calendar .rdp-day_recorded:not([aria-selected="true"])::after,
-        /* パターンB: class が親要素(.rdp-cell等)に付く場合 → 子の .rdp-day に対して描画 */
         .nb-calendar
           .rdp-day_recorded
           :where(.rdp-day):not([aria-selected="true"])::after {
@@ -235,11 +192,6 @@ export default function CalendarPicker({
           pointer-events: none;
         }
 
-        /* ----------------------------
-            スキップ日（グレー表示）
-           ---------------------------- */
-
-        /* テキスト色（両対応） */
         .nb-calendar .rdp-day_skipped:not([aria-selected="true"]),
         .nb-calendar
           .rdp-day_skipped
@@ -247,7 +199,6 @@ export default function CalendarPicker({
           color: hsl(var(--muted-foreground) / 0.6) !important;
         }
 
-        /* 背景マーカー（両対応） */
         .nb-calendar .rdp-day_skipped:not([aria-selected="true"])::after,
         .nb-calendar
           .rdp-day_skipped
@@ -261,12 +212,6 @@ export default function CalendarPicker({
           pointer-events: none;
         }
 
-        /* ----------------------------
-            recorded と skipped が両方付いたら recorded を優先
-           （基本は起きないはずだが、保険）
-           ---------------------------- */
-
-        /* テキスト色を recorded 寄りに戻す（両対応） */
         .nb-calendar
           .rdp-day_recorded.rdp-day_skipped:not([aria-selected="true"]),
         .nb-calendar
@@ -275,7 +220,6 @@ export default function CalendarPicker({
           color: hsl(var(--card-foreground)) !important;
         }
 
-        /* マーカーも recorded を優先（両対応） */
         .nb-calendar
           .rdp-day_recorded.rdp-day_skipped:not([aria-selected="true"])::after,
         .nb-calendar
@@ -288,16 +232,16 @@ export default function CalendarPicker({
 
       <DayPicker
         mode="single"
-        selected={selected}
-        onSelect={onSelect}
-        month={month}
-        onMonthChange={onMonthChange}
+        selected={selectedDay}
+        onSelect={handleDateSelect}
+        month={displayMonth}
+        onMonthChange={handleMonthChange}
         weekStartsOn={1}
         disabled={{ after: new Date() }}
         locale={ja}
         modifiers={{
-          recorded: (d) => recordedSet.has(toYmdLocal(d)),
-          skipped: (d) => skippedSet.has(toYmdLocal(d)),
+          recorded: (date) => recordedDateSet.has(formatDateToYmd(date)),
+          skipped: (date) => skippedDateSet.has(formatDateToYmd(date)),
         }}
         modifiersClassNames={{
           recorded: "rdp-day_recorded",
