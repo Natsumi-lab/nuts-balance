@@ -1,13 +1,34 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextRequest, NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+
+const LOGIN_PATH = "/auth/login";
+const DEFAULT_REDIRECT_PATH = "/settings";
+const HTML_CONTENT_TYPE = "text/html; charset=utf-8";
+
+const AUTH_ERROR = {
+  AUTH_FAILED: "auth_failed",
+  OTP_EXPIRED: "otp_expired",
+  MISSING_PARAMS: "missing_params",
+} as const;
+
+const VALID_EMAIL_OTP_TYPES: EmailOtpType[] = [
+  "signup",
+  "invite",
+  "magiclink",
+  "recovery",
+  "email_change",
+  "email",
+];
 
 /**
- * HTML属性値をエスケープ（XSS対策）
+ * hidden input の value に入れる文字を安全な形に変換する。
+ * URLパラメータの値をそのまま HTML に入れると、画面が意図しない形で壊れることがあるため。
  */
-function escapeHtmlAttr(str: string | null): string {
-  if (!str) return "";
-  return str
+function escapeHtmlAttr(value: string | null): string {
+  if (!value) return "";
+
+  return value
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
@@ -16,46 +37,87 @@ function escapeHtmlAttr(str: string | null): string {
 }
 
 /**
- * EmailOtpType として有効な値かどうかを判定する型ガード
+ * 空文字や空白だけの値を null にそろえる。
+ * 最初に値の形をそろえておくと、この後の if 文が読みやすくなるため。
  */
+function normalizeFormValue(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+
+  const trimmedValue = value.trim();
+  return trimmedValue === "" ? null : trimmedValue;
+}
+
 function isValidEmailOtpType(value: string): value is EmailOtpType {
-  const valid: EmailOtpType[] = [
-    "signup",
-    "invite",
-    "magiclink",
-    "recovery",
-    "email_change",
-    "email",
-  ];
-  return valid.includes(value as EmailOtpType);
+  return VALID_EMAIL_OTP_TYPES.includes(value as EmailOtpType);
 }
 
 /**
- * 安全なリダイレクト先を取得（同一オリジンのみ許可）
- * - 絶対URL/任意スキームを拒否（https:, javascript: 等）
- * - protocol-relative URL (//evil.com) を拒否
- * - "/" で始まる相対パスのみ許可
+ * リダイレクト先として使ってよいパスだけを許可する。
+ * アプリの外に飛ぶ値まで受け入れると危険なので、
+ * このアプリ内のパスだけ使えるようにしている。
  */
-function getSafeRedirectPath(path: string | null, fallback: string): string {
-  if (!path) return fallback;
+function getSafeRedirectPath(
+  path: string | null,
+  fallbackPath: string
+): string {
+  if (!path) return fallbackPath;
 
-  const p = path.trim();
+  const trimmedPath = path.trim();
 
-  // 絶対URLや任意スキーム（https:, javascript: など）は拒否
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(p)) return fallback;
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmedPath)) {
+    return fallbackPath;
+  }
 
-  // protocol-relative URL（//evil.com）を拒否
-  if (p.startsWith("//")) return fallback;
+  if (trimmedPath.startsWith("//")) {
+    return fallbackPath;
+  }
 
-  // 同一オリジンの相対パス（"/" で始まるもの）のみ許可
-  if (p.startsWith("/")) return p;
+  if (trimmedPath.startsWith("/")) {
+    return trimmedPath;
+  }
 
-  return fallback;
+  return fallbackPath;
 }
 
 /**
- * 確認画面の HTML を生成
+ * ログイン画面にエラー付きで戻すためのレスポンスを作る。
+ * 同じ処理が何回も出てくるので関数にまとめている。
  */
+function createLoginErrorRedirect(
+  origin: string,
+  errorCode: (typeof AUTH_ERROR)[keyof typeof AUTH_ERROR]
+): NextResponse {
+  const errorUrl = new URL(LOGIN_PATH, origin);
+  errorUrl.searchParams.set("error", errorCode);
+
+  return NextResponse.redirect(errorUrl);
+}
+
+/**
+ * Supabase のサーバークライアントを作る。
+ * 認証後に受け取った cookie をリダイレクトレスポンスに反映するため、
+ * request と response の両方を受け取るようにしている。
+ */
+function createSupabaseClient(
+  request: NextRequest,
+  response: NextResponse
+) {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+}
+
 function generateConfirmationHtml(params: {
   code: string | null;
   token: string | null;
@@ -145,147 +207,109 @@ function generateConfirmationHtml(params: {
 }
 
 /**
- * GET: 確認画面を表示（認証処理は行わない）
- * プリフェッチによるトークン消費を防ぐ
+ * GET では認証を完了せず、確認画面だけを表示する。
+ * メールアプリやブラウザがリンク先を先に開くことがあり、
+ * その時点で認証してしまうと、本人が押したときにリンクが使えなくなることがあるため。
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
 
-  // 失敗リンク（Supabaseから error が付いて返ってきた）なら、
-  // 確認画面を出さずにログイン画面へ誘導する
   const error = searchParams.get("error");
   const errorCode = searchParams.get("error_code");
 
   if (error) {
-    const errorUrl = new URL("/auth/login", origin);
+    const normalizedErrorCode =
+      errorCode === "otp_expired"
+        ? AUTH_ERROR.OTP_EXPIRED
+        : AUTH_ERROR.AUTH_FAILED;
 
-    // Supabaseの error_code を、アプリ側で扱いやすいキーに寄せる
-    if (errorCode === "otp_expired") {
-      errorUrl.searchParams.set("error", "otp_expired");
-    } else {
-      errorUrl.searchParams.set("error", "auth_failed");
-    }
-
-    return NextResponse.redirect(errorUrl);
+    return createLoginErrorRedirect(origin, normalizedErrorCode);
   }
 
-  const code = searchParams.get("code");
-  const token = searchParams.get("token");
-  const tokenHash = searchParams.get("token_hash");
-  const type = searchParams.get("type");
-  const redirectTo = searchParams.get("redirect_to") ?? searchParams.get("next");
-
   const html = generateConfirmationHtml({
-    code,
-    token,
-    tokenHash,
-    type,
-    redirectTo,
+    code: searchParams.get("code"),
+    token: searchParams.get("token"),
+    tokenHash: searchParams.get("token_hash"),
+    type: searchParams.get("type"),
+    redirectTo:
+      searchParams.get("redirect_to") ?? searchParams.get("next"),
   });
 
   return new NextResponse(html, {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: { "Content-Type": HTML_CONTENT_TYPE },
   });
 }
 
 /**
- * POST: 実際の認証処理を行う
+ * POST でだけ認証を確定する。
+ * 認証リンクには複数の形式があるため、
+ * どの値が届いたかを順番に確認しながら処理している。
  */
 export async function POST(request: NextRequest) {
   const { origin } = request.nextUrl;
   const formData = await request.formData();
 
-  const code = formData.get("code") as string | null;
-  const token = formData.get("token") as string | null;
-  const tokenHash = formData.get("token_hash") as string | null;
-  const type = formData.get("type") as string | null;
-  const redirectTo = formData.get("redirect_to") as string | null;
+  const code = normalizeFormValue(formData.get("code"));
+  const token = normalizeFormValue(formData.get("token"));
+  const tokenHash = normalizeFormValue(formData.get("token_hash"));
+  const type = normalizeFormValue(formData.get("type"));
+  const redirectTo = normalizeFormValue(formData.get("redirect_to"));
 
-  // 空文字を null に変換
-  const normalizedCode = code && code.trim() !== "" ? code : null;
-  const normalizedToken = token && token.trim() !== "" ? token : null;
-  const normalizedTokenHash =
-    tokenHash && tokenHash.trim() !== "" ? tokenHash : null;
-  const normalizedType = type && type.trim() !== "" ? type : null;
-
-  const redirectPath = getSafeRedirectPath(redirectTo, "/settings");
-  const successUrl = new URL(redirectPath, origin);
-
-  // 成功時に返す redirect レスポンスを先に作成
-  const redirectResponse = NextResponse.redirect(successUrl);
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            redirectResponse.cookies.set(name, value, options);
-          });
-        },
-      },
-    }
+  const redirectPath = getSafeRedirectPath(
+    redirectTo,
+    DEFAULT_REDIRECT_PATH
   );
+  const successUrl = new URL(redirectPath, origin);
+  const successResponse = NextResponse.redirect(successUrl);
 
-  // (1) code がある場合（通常 PKCE フロー）
-  if (normalizedCode) {
-    const { error } = await supabase.auth.exchangeCodeForSession(normalizedCode);
+  const supabase = createSupabaseClient(request, successResponse);
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
     if (error) {
-      const errorUrl = new URL("/auth/login", origin);
-      errorUrl.searchParams.set("error", "auth_failed");
-      return NextResponse.redirect(errorUrl);
+      return createLoginErrorRedirect(origin, AUTH_ERROR.AUTH_FAILED);
     }
-    return redirectResponse;
+
+    return successResponse;
   }
 
-  // (2) token が pkce_ で始まる場合は最優先で exchange（verifyOtpしない）
-  if (normalizedToken && normalizedToken.startsWith("pkce_")) {
-    const { error } = await supabase.auth.exchangeCodeForSession(normalizedToken);
+  if (token?.startsWith("pkce_")) {
+    const { error } = await supabase.auth.exchangeCodeForSession(token);
+
     if (error) {
-      const errorUrl = new URL("/auth/login", origin);
-      errorUrl.searchParams.set("error", "auth_failed");
-      return NextResponse.redirect(errorUrl);
+      return createLoginErrorRedirect(origin, AUTH_ERROR.AUTH_FAILED);
     }
-    return redirectResponse;
+
+    return successResponse;
   }
 
-  // (3) token_hash + type がある場合
-  if (normalizedTokenHash && normalizedType && isValidEmailOtpType(normalizedType)) {
+  if (tokenHash && type && isValidEmailOtpType(type)) {
     const { error } = await supabase.auth.verifyOtp({
-      token_hash: normalizedTokenHash,
-      type: normalizedType,
+      token_hash: tokenHash,
+      type,
     });
 
     if (error) {
-      const errorUrl = new URL("/auth/login", origin);
-      errorUrl.searchParams.set("error", "otp_expired");
-      return NextResponse.redirect(errorUrl);
+      return createLoginErrorRedirect(origin, AUTH_ERROR.OTP_EXPIRED);
     }
 
-    return redirectResponse;
+    return successResponse;
   }
 
-  // (4) token + type がある場合（pkce_ ではない OTP 系）
-  if (normalizedToken && normalizedType && isValidEmailOtpType(normalizedType)) {
+  if (token && type && isValidEmailOtpType(type)) {
     const { error } = await supabase.auth.verifyOtp({
-      token_hash: normalizedToken,
-      type: normalizedType,
+      token_hash: token,
+      type,
     });
 
     if (error) {
-      const errorUrl = new URL("/auth/login", origin);
-      errorUrl.searchParams.set("error", "otp_expired");
-      return NextResponse.redirect(errorUrl);
+      return createLoginErrorRedirect(origin, AUTH_ERROR.OTP_EXPIRED);
     }
 
-    return redirectResponse;
+    return successResponse;
   }
 
-  // パラメータ不足
-  const errorUrl = new URL("/auth/login", origin);
-  errorUrl.searchParams.set("error", "missing_params");
-  return NextResponse.redirect(errorUrl);
+  return createLoginErrorRedirect(origin, AUTH_ERROR.MISSING_PARAMS);
 }
