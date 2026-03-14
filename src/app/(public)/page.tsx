@@ -8,7 +8,6 @@ export default async function PublicHomePage() {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // 遷移先だけを決める
   const nextPath = session ? "/app" : "/auth/login";
 
   return <Splash nextPath={nextPath} />;
