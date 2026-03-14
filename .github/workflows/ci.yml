@@ -25,20 +25,14 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # Lint（スクリプトが無い場合も落とさない）
       - name: Lint
         run: npm run lint --if-present
 
-      # Type check（あるなら実行。無いなら落とさない）
       - name: Typecheck
         run: npm run typecheck --if-present
 
-      # Unit test（あるなら実行。無いなら落とさない）
       - name: Test
         run: npm test --if-present
-
-      # Build（Next.jsのビルドで壊れてないか確認）
-      # Supabase系の環境変数がビルド時に必要なら GitHub Secrets に設定してここで渡す
 
       - name: Build
         run: npm run build

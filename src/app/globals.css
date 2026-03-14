@@ -1,71 +1,40 @@
 @import "tailwindcss";
 
-/* =========================================
-   ライトテーマ（HSL形式）
-========================================= */
+/* ライトテーマ */
 :root {
-  /* 基本の文字色・背景色 */
   --background: 150 20% 92%;
-  /* セージグリーン系のベース */
   --foreground: 15 15% 20%;
-  /* ダークブラウン（本文） */
 
-  /* カード（面）の色 */
   --card: 150 15% 97%;
-  /* 明るめセージ */
   --card-foreground: 15 15% 20%;
-  /* カード内テキスト */
 
-  /* ポップオーバー／ドロップダウン */
   --popover: 150 15% 97%;
   --popover-foreground: 15 15% 20%;
 
-  /* 主要アクション（ボタン等） */
   --primary: 147 25% 46%;
-  /* ディープグリーン */
   --primary-foreground: 0 0% 100%;
-  /* 白 */
 
-  /* サブアクション */
   --secondary: 160 15% 73%;
-  /* ライトグリーン */
   --secondary-foreground: 15 20% 15%;
-  /* 濃いブラウン */
 
-  /* 控えめな要素（説明文・薄背景など） */
   --muted: 150 10% 86%;
   --muted-foreground: 160 10% 40%;
 
-  /* アクセント（強調色） */
   --accent: 39 93% 48%;
-  /* ハーベストイエロー */
   --accent-foreground: 15 20% 15%;
 
-  /* 枠線 */
   --border: 150 15% 80%;
-
-  /* 入力欄の背景 */
   --input: 150 10% 90%;
-
-  /* フォーカスリング */
   --ring: 30 80% 56%;
-  /* ウォームオレンジ */
 
-  /* 角丸 */
   --radius: 0.5rem;
 
-  /* =========================================
-     背景グラデーション
-  ========================================= */
   --bg-top: 150 35% 95%;
-  /* 上：明るいミント */
   --bg-mid: 150 35% 88%;
-  /* 中：ライトグリーン */
   --bg-bottom: 125 55% 75%;
-  /* 下：鮮やかめのライムグリーン */
 }
 
-/* Tailwindの theme inline */
+/* Tailwind theme */
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -89,57 +58,39 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* =========================================
-   ダークテーマ（.dark クラスで切替）
-========================================= */
+/* ダークテーマ */
 .dark {
-  /* 基本の文字色・背景色 */
   --background: 150 15% 15%;
   --foreground: 150 10% 90%;
 
-  /* カード（面）の色 */
   --card: 150 15% 18%;
   --card-foreground: 150 10% 92%;
 
-  /* ポップオーバー／ドロップダウン */
   --popover: 150 15% 18%;
   --popover-foreground: 150 10% 92%;
 
-  /* 主要アクション */
   --primary: 147 30% 35%;
   --primary-foreground: 0 0% 95%;
 
-  /* サブアクション */
   --secondary: 160 15% 25%;
   --secondary-foreground: 150 10% 90%;
 
-  /* 控えめな要素 */
   --muted: 150 10% 25%;
   --muted-foreground: 150 5% 65%;
 
-  /* アクセント */
   --accent: 39 70% 40%;
   --accent-foreground: 0 0% 95%;
 
-  /* 枠線 */
   --border: 150 15% 30%;
-
-  /* 入力欄 */
   --input: 150 15% 20%;
-
-  /* フォーカスリング */
   --ring: 30 70% 45%;
 
-  /* ダーク用 背景グラデーション */
   --bg-top: 155 18% 16%;
   --bg-mid: 150 18% 13%;
   --bg-bottom: 135 20% 12%;
 }
 
-/* =========================================
-   ベーススタイル
-   - 背景を「アプリ全体」に効かせる
-========================================= */
+/* ベーススタイル */
 html,
 body {
   min-height: 100%;
@@ -148,21 +99,14 @@ body {
 
 body {
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
-
-  /*  背景グラデーション（アプリ全体） */
   background: linear-gradient(to bottom,
       hsl(var(--bg-top)) 0%,
       hsl(var(--bg-mid)) 45%,
       hsl(var(--bg-bottom)) 100%);
-
   color: hsl(var(--foreground));
 }
 
-/* =========================================
-   キャラクターアニメーション
-========================================= */
-
-/* 常時アニメーション：呼吸（scaleのみ、floatは撤廃） */
+/* キャラクターアニメーション */
 @keyframes character-breathe {
 
   0%,
@@ -179,7 +123,6 @@ body {
   animation: character-breathe 2.8s ease-in-out infinite;
 }
 
-/* 進化フラッシュ：背景が輝く */
 @keyframes evolution-flash {
   0% {
     opacity: 0;
@@ -201,7 +144,6 @@ body {
   animation: evolution-flash 0.6s ease-out forwards;
 }
 
-/* 進化時のキャラクター強調（少し大きくなって戻る） */
 @keyframes evolution-pop {
   0% {
     transform: scale(1);
@@ -223,7 +165,6 @@ body {
   animation: evolution-pop 0.8s ease-out forwards;
 }
 
-/* クロスフェード用：フェードイン */
 @keyframes fade-in {
   0% {
     opacity: 0;
@@ -238,7 +179,6 @@ body {
   animation: fade-in 0.5s ease-out forwards;
 }
 
-/* アイコンのキラキラ（成長時） */
 @keyframes icon-sparkle {
 
   0%,
@@ -267,7 +207,6 @@ body {
   animation: icon-sparkle 0.8s ease-out;
 }
 
-/* ゆっくり点滅（ストリーク火アイコン用） */
 @keyframes pulse-slow {
 
   0%,
@@ -284,9 +223,7 @@ body {
   animation: pulse-slow 2s ease-in-out infinite;
 }
 
-/* =========================================
-   prefers-reduced-motion 対応
-========================================= */
+/* アニメーションを減らしたい環境向け */
 @media (prefers-reduced-motion: reduce) {
 
   .animate-character-breathe,
