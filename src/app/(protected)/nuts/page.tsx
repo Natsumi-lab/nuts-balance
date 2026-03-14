@@ -1,4 +1,3 @@
-// src/app/(protected)/nuts/page.tsx
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,14 +12,111 @@ type Nut = {
   score_vitamin: number;
 };
 
+type NutDescription = {
+  flavor: string;
+  nutrition: string;
+  usage: string;
+};
+
+type DescriptionSectionProps = {
+  title: string;
+  content: string;
+};
+
+type ScoreCellProps = {
+  label: string;
+  value: number;
+};
+
+type StarsProps = {
+  value: number;
+  max: number;
+};
+
+const NUT_SELECT_FIELDS = `
+  id,
+  name,
+  description,
+  image_path,
+  score_antioxidant,
+  score_mineral,
+  score_fiber,
+  score_vitamin
+`;
+
+const DEFAULT_NUT_SLUG = "almond";
+const MAX_SCORE = 5;
+
+const NUT_SLUGS: Record<string, string> = {
+  アーモンド: "almond",
+  くるみ: "walnuts",
+  カシューナッツ: "cashew",
+  ピスタチオ: "pistachio",
+  マカダミアナッツ: "macadamia",
+  ヘーゼルナッツ: "hazel",
+};
+
+const NUT_DESCRIPTIONS: Record<string, NutDescription> = {
+  アーモンド: {
+    flavor:
+      "香ばしさと軽やかな歯ごたえが特長の定番ナッツ。クセが少なく、日常の食事に取り入れやすい存在です。",
+    nutrition:
+      "ビタミンEを含み、脂質はバランスの取れた構成。間食としても使いやすい食品です。",
+    usage:
+      "そのままはもちろん、ヨーグルトやサラダのトッピングにも適しています。",
+  },
+  くるみ: {
+    flavor:
+      "コクとほのかな苦みを持つ、存在感のあるナッツ。独特の風味が料理に深みを与えます。",
+    nutrition: "脂質を多く含み、食事の満足感を高めやすい食品です。",
+    usage:
+      "刻んでサラダやパン生地に加えるなど、調理素材としても幅広く使われています。",
+  },
+  カシューナッツ: {
+    flavor:
+      "やわらかな食感とやさしい甘みが特長。刺激が少なく、幅広い層に親しまれています。",
+    nutrition:
+      "ミネラルを含み、エネルギー源としても活用されるナッツ。少量でも満足感を得やすく、間食として取り入れやすい食品です。",
+    usage: "そのままの間食に加え、炒め物やエスニック料理にもよく合います。",
+  },
+  ピスタチオ: {
+    flavor:
+      "鮮やかな色合いと香ばしさが印象的なナッツ。殻付きで提供されることも多い食品です。",
+    nutrition:
+      "食物繊維を含み、咀嚼回数が自然に増えやすい食品。間食としてゆっくり摂取しやすい特性があります。",
+    usage: "製菓やデザートの彩りとしても活用されることが多い素材です。",
+  },
+  マカダミアナッツ: {
+    flavor: "クリーミーで濃厚な口当たりが特長。丸みのある味わいを持ちます。",
+    nutrition:
+      "脂質を多く含み、エネルギー密度が高いナッツ。少量でも満足感を得やすく、補助的なエネルギー源として利用されます。",
+    usage:
+      "そのままの摂取に加え、チョコレート製品などにも広く使用されています。",
+  },
+  ヘーゼルナッツ: {
+    flavor:
+      "香り高く、深みのあるコクを持つナッツ。加熱することで香ばしさが際立ちます。",
+    nutrition:
+      "ビタミンEを含み、脂質構成にも特徴があります。加工食品にも適し、風味と栄養の両面で活用されています。",
+    usage: "スプレッドや焼き菓子など、菓子分野で多く利用される素材です。",
+  },
+};
+
+function getNutImageSrc(name: string): string {
+  const slug = NUT_SLUGS[name] ?? DEFAULT_NUT_SLUG;
+  return `/nuts/mini-${slug}.png`;
+}
+
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(MAX_SCORE, Number(value) || 0));
+}
+
 export default async function NutsPage() {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("nuts")
-    .select(
-      "id, name, description, image_path, score_antioxidant, score_mineral, score_fiber, score_vitamin",
-    )
+    .select(NUT_SELECT_FIELDS)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -38,7 +134,6 @@ export default async function NutsPage() {
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:gap-6">
-      {/* ヘッダー */}
       <header className="rounded-2xl border border-white/20 bg-card p-5 shadow-lg dark:border-white/10">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           ナッツの知識
@@ -48,31 +143,24 @@ export default async function NutsPage() {
         </p>
       </header>
 
-      {/* ナッツ一覧 */}
       <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         {nuts.map((nut) => {
-          const miniSrc = `/nuts/mini-${nutSlugFromName(nut.name)}.png`;
-          const desc = nutDescriptions[nut.name];
+          const imageSrc = getNutImageSrc(nut.name);
+          const description = NUT_DESCRIPTIONS[nut.name];
 
           return (
             <article
               key={nut.id}
               className="group flex flex-col rounded-2xl border border-white/20 bg-card p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-white/10"
             >
-              {/* ナッツ名 + 画像 */}
               <div className="mb-4 flex items-center gap-4">
-                {/*  画像*/}
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border/30 bg-muted/30">
                   <Image
-                    src={miniSrc}
+                    src={imageSrc}
                     alt={nut.name}
                     fill
                     sizes="80px"
-                    className="
-                      rounded-xl object-contain p-1
-                      transition-transform duration-300
-                      group-hover:scale-105
-                    "
+                    className="rounded-xl object-contain p-1 transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
 
@@ -81,27 +169,25 @@ export default async function NutsPage() {
                 </h2>
               </div>
 
-              {/* 説明文 */}
               <div className="flex-1 space-y-4 text-sm">
-                {desc && (
+                {description && (
                   <>
                     <DescriptionSection
                       title="風味と特徴"
-                      content={desc.flavor}
+                      content={description.flavor}
                     />
                     <DescriptionSection
                       title="栄養的ポイント"
-                      content={desc.nutrition}
+                      content={description.nutrition}
                     />
                     <DescriptionSection
                       title="活用シーン"
-                      content={desc.usage}
+                      content={description.usage}
                     />
                   </>
                 )}
               </div>
 
-              {/* スコア */}
               <div className="mt-auto grid grid-cols-2 gap-3 pt-4">
                 <ScoreCell label="抗酸化力" value={nut.score_antioxidant} />
                 <ScoreCell label="ミネラル" value={nut.score_mineral} />
@@ -113,14 +199,7 @@ export default async function NutsPage() {
         })}
       </section>
 
-      {/* 内容量の目安 */}
-      <section
-        className="
-          rounded-2xl border border-white/20 bg-card p-5 shadow-lg
-          transition-all duration-300 hover:-translate-y-1 hover:shadow-xl
-          dark:border-white/10
-        "
-      >
+      <section className="rounded-2xl border border-white/20 bg-card p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-white/10">
         <h2 className="mb-4 text-lg font-semibold text-foreground">
           1日の目安量
         </h2>
@@ -153,14 +232,7 @@ export default async function NutsPage() {
 
 /* ---------- コンポーネント ---------- */
 
-/** 説明セクション（見出し + 本文） */
-function DescriptionSection({
-  title,
-  content,
-}: {
-  title: string;
-  content: string;
-}) {
+function DescriptionSection({ title, content }: DescriptionSectionProps) {
   return (
     <div>
       <h3 className="mb-1 text-sm font-semibold text-[hsl(var(--primary))]">
@@ -171,39 +243,29 @@ function DescriptionSection({
   );
 }
 
-/** スコア表示セル */
-function ScoreCell({ label, value }: { label: string; value: number }) {
-  const v = Math.max(0, Math.min(5, Number(value) || 0));
+function ScoreCell({ label, value }: ScoreCellProps) {
+  const score = clampScore(value);
 
   return (
-    <div
-      className="
-        flex items-center justify-between gap-2 rounded-xl
-        border border-border/20 bg-muted/40 px-4 py-2
-        transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md
-        hover:shadow-black/5 dark:bg-muted/30 dark:hover:shadow-black/20
-        cursor-default
-      "
-    >
+    <div className="cursor-default flex items-center justify-between gap-2 rounded-xl border border-border/20 bg-muted/40 px-4 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/5 dark:bg-muted/30 dark:hover:shadow-black/20">
       <span className="w-[5.5rem] whitespace-nowrap text-xs font-medium text-muted-foreground">
         {label}
       </span>
       <span className="shrink-0 text-sm">
-        <Stars value={v} max={5} />
+        <Stars value={score} max={MAX_SCORE} />
       </span>
     </div>
   );
 }
 
-/** 星評価表示 */
-function Stars({ value, max }: { value: number; max: number }) {
+function Stars({ value, max }: StarsProps) {
   return (
     <span className="flex items-center gap-0.5 leading-none">
-      {Array.from({ length: max }).map((_, i) => (
+      {Array.from({ length: max }).map((_, index) => (
         <span
-          key={i}
+          key={index}
           className={
-            i < value
+            index < value
               ? "text-yellow-500 dark:text-yellow-400"
               : "text-foreground/20"
           }
@@ -214,75 +276,3 @@ function Stars({ value, max }: { value: number; max: number }) {
     </span>
   );
 }
-
-/* ---------- ユーティリティ ---------- */
-
-function nutSlugFromName(name: string) {
-  const map: Record<string, string> = {
-    アーモンド: "almond",
-    くるみ: "walnuts",
-    カシューナッツ: "cashew",
-    ピスタチオ: "pistachio",
-    マカダミアナッツ: "macadamia",
-    ヘーゼルナッツ: "hazel",
-  };
-  return map[name] ?? "almond";
-}
-
-/** ナッツ説明データ */
-type NutDescription = {
-  flavor: string;
-  nutrition: string;
-  usage: string;
-};
-
-const nutDescriptions: Record<string, NutDescription> = {
-  アーモンド: {
-    flavor:
-      "香ばしさと軽やかな歯ごたえが特長の定番ナッツ。クセが少なく、日常の食事に取り入れやすい存在です。",
-    nutrition:
-      "ビタミンEを含み、脂質はバランスの取れた構成。間食としても使いやすい食品です。",
-    usage:
-      "そのままはもちろん、ヨーグルトやサラダのトッピングにも適しています。",
-  },
-
-  くるみ: {
-    flavor:
-      "コクとほのかな苦みを持つ、存在感のあるナッツ。独特の風味が料理に深みを与えます。",
-    nutrition: "脂質を多く含み、食事の満足感を高めやすい食品です。",
-    usage:
-      "刻んでサラダやパン生地に加えるなど、調理素材としても幅広く使われています。",
-  },
-
-  カシューナッツ: {
-    flavor:
-      "やわらかな食感とやさしい甘みが特長。刺激が少なく、幅広い層に親しまれています。",
-    nutrition:
-      "ミネラルを含み、エネルギー源としても活用されるナッツ。少量でも満足感を得やすく、間食として取り入れやすい食品です。",
-    usage: "そのままの間食に加え、炒め物やエスニック料理にもよく合います。",
-  },
-
-  ピスタチオ: {
-    flavor:
-      "鮮やかな色合いと香ばしさが印象的なナッツ。殻付きで提供されることも多い食品です。",
-    nutrition:
-      "食物繊維を含み、咀嚼回数が自然に増えやすい食品。間食としてゆっくり摂取しやすい特性があります。",
-    usage: "製菓やデザートの彩りとしても活用されることが多い素材です。",
-  },
-
-  マカダミアナッツ: {
-    flavor: "クリーミーで濃厚な口当たりが特長。丸みのある味わいを持ちます。",
-    nutrition:
-      "脂質を多く含み、エネルギー密度が高いナッツ。少量でも満足感を得やすく、補助的なエネルギー源として利用されます。",
-    usage:
-      "そのままの摂取に加え、チョコレート製品などにも広く使用されています。",
-  },
-
-  ヘーゼルナッツ: {
-    flavor:
-      "香り高く、深みのあるコクを持つナッツ。加熱することで香ばしさが際立ちます。",
-    nutrition:
-      "ビタミンEを含み、脂質構成にも特徴があります。加工食品にも適し、風味と栄養の両面で活用されています。",
-    usage: "スプレッドや焼き菓子など、菓子分野で多く利用される素材です。",
-  },
-};
