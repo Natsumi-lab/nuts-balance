@@ -2,7 +2,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SettingsClient from "./SettingsClient";
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams?: Promise<{
+    info?: string;
+  }>;
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,5 +20,13 @@ export default async function SettingsPage() {
     redirect("/auth/login");
   }
 
-  return <SettingsClient initialEmail={user.email ?? null} />;
+  const resolvedSearchParams = await searchParams;
+  const infoMessage = resolvedSearchParams?.info ?? null;
+
+  return (
+    <SettingsClient
+      initialEmail={user.email ?? null}
+      infoMessage={infoMessage}
+    />
+  );
 }

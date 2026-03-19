@@ -3,13 +3,20 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 const LOGIN_PATH = "/auth/login";
-const DEFAULT_REDIRECT_PATH = "/settings";
+const SETTINGS_PATH = "/settings";
+const DEFAULT_REDIRECT_PATH = SETTINGS_PATH;
 const HTML_CONTENT_TYPE = "text/html; charset=utf-8";
 
-const AUTH_ERROR = {
-  AUTH_FAILED: "auth_failed",
-  OTP_EXPIRED: "otp_expired",
-  MISSING_PARAMS: "missing_params",
+const AUTH_ERROR_MESSAGE = {
+  AUTH_FAILED: "認証に失敗しました。もう一度お試しください。",
+  OTP_EXPIRED: "認証リンクの有効期限が切れています。もう一度お試しください。",
+  MISSING_PARAMS: "認証に必要な情報が不足しています。",
+} as const;
+
+const SETTINGS_INFO_MESSAGE = {
+  EMAIL_CHANGE_PENDING:
+    "確認リンクを受け付けました。もう一方のメールに届いたリンクも開いてください。",
+  EMAIL_CHANGE_CONFIRMED: "メールアドレスを変更しました。",
 } as const;
 
 const VALID_EMAIL_OTP_TYPES: EmailOtpType[] = [
@@ -22,8 +29,8 @@ const VALID_EMAIL_OTP_TYPES: EmailOtpType[] = [
 ];
 
 /**
- * hidden input の value に入れる文字を安全な形に変換する。
- * URLパラメータの値をそのまま HTML に入れると、画面が意図しない形で壊れることがあるため。
+ * hidden input に入れる値を安全な文字列へ変換する。
+ * URL パラメータをそのまま HTML に埋め込むと、意図しない解釈をされる可能性があるため。
  */
 function escapeHtmlAttr(value: string | null): string {
   if (!value) return "";
@@ -38,7 +45,7 @@ function escapeHtmlAttr(value: string | null): string {
 
 /**
  * 空文字や空白だけの値を null にそろえる。
- * 最初に値の形をそろえておくと、この後の if 文が読みやすくなるため。
+ * 先に値の形を統一すると、この後の条件分岐を短く読みやすくできるため。
  */
 function normalizeFormValue(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") return null;
@@ -52,9 +59,8 @@ function isValidEmailOtpType(value: string): value is EmailOtpType {
 }
 
 /**
- * リダイレクト先として使ってよいパスだけを許可する。
- * アプリの外に飛ぶ値まで受け入れると危険なので、
- * このアプリ内のパスだけ使えるようにしている。
+ * redirect_to にはアプリ内パスだけを許可する。
+ * 外部 URL や protocol-relative URL を受け入れると危険なため。
  */
 function getSafeRedirectPath(
   path: string | null,
@@ -79,25 +85,27 @@ function getSafeRedirectPath(
   return fallbackPath;
 }
 
-/**
- * ログイン画面にエラー付きで戻すためのレスポンスを作る。
- * 同じ処理が何回も出てくるので関数にまとめている。
- */
 function createLoginErrorRedirect(
   origin: string,
-  errorCode: (typeof AUTH_ERROR)[keyof typeof AUTH_ERROR]
+  errorMessage:
+    (typeof AUTH_ERROR_MESSAGE)[keyof typeof AUTH_ERROR_MESSAGE]
 ): NextResponse {
   const errorUrl = new URL(LOGIN_PATH, origin);
-  errorUrl.searchParams.set("error", errorCode);
+  errorUrl.searchParams.set("error", errorMessage);
 
   return NextResponse.redirect(errorUrl);
 }
 
-/**
- * Supabase のサーバークライアントを作る。
- * 認証後に受け取った cookie をリダイレクトレスポンスに反映するため、
- * request と response の両方を受け取るようにしている。
- */
+function createSettingsInfoRedirect(
+  origin: string,
+  infoMessage: string
+): NextResponse {
+  const infoUrl = new URL(SETTINGS_PATH, origin);
+  infoUrl.searchParams.set("info", infoMessage);
+
+  return NextResponse.redirect(infoUrl);
+}
+
 function createSupabaseClient(
   request: NextRequest,
   response: NextResponse
@@ -118,6 +126,16 @@ function createSupabaseClient(
   );
 }
 
+/**
+ * 1通目のメール確認後は、message だけが付いた URL で戻ってくることがある。
+ * このケースでは認証処理を続けるのではなく、設定画面へ案内を返す。
+ */
+function isEmailChangePendingMessage(message: string | null): boolean {
+  if (!message) return false;
+
+  return message.includes("Confirmation link accepted");
+}
+
 function generateConfirmationHtml(params: {
   code: string | null;
   token: string | null;
@@ -136,7 +154,7 @@ function generateConfirmationHtml(params: {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       min-height: 100vh;
       display: flex;
@@ -207,44 +225,60 @@ function generateConfirmationHtml(params: {
 }
 
 /**
- * GET では認証を完了せず、確認画面だけを表示する。
- * メールアプリやブラウザがリンク先を先に開くことがあり、
- * その時点で認証してしまうと、本人が押したときにリンクが使えなくなることがあるため。
+ * GET では認証を完了させず、確認画面だけを表示する。
+ * メールアプリやブラウザの先読みでリンクが消費されるのを避けるため。
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
 
   const error = searchParams.get("error");
   const errorCode = searchParams.get("error_code");
+  const message = searchParams.get("message");
 
   if (error) {
-    const normalizedErrorCode =
+    const errorMessage =
       errorCode === "otp_expired"
-        ? AUTH_ERROR.OTP_EXPIRED
-        : AUTH_ERROR.AUTH_FAILED;
+        ? AUTH_ERROR_MESSAGE.OTP_EXPIRED
+        : AUTH_ERROR_MESSAGE.AUTH_FAILED;
 
-    return createLoginErrorRedirect(origin, normalizedErrorCode);
+    return createLoginErrorRedirect(origin, errorMessage);
   }
 
+  if (isEmailChangePendingMessage(message)) {
+    return createSettingsInfoRedirect(
+      origin,
+      SETTINGS_INFO_MESSAGE.EMAIL_CHANGE_PENDING
+    );
+  }
+
+  const code = searchParams.get("code");
+  const token = searchParams.get("token");
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
+  const redirectTo =
+    searchParams.get("redirect_to") ?? searchParams.get("next");
+
   const html = generateConfirmationHtml({
-    code: searchParams.get("code"),
-    token: searchParams.get("token"),
-    tokenHash: searchParams.get("token_hash"),
-    type: searchParams.get("type"),
-    redirectTo:
-      searchParams.get("redirect_to") ?? searchParams.get("next"),
+    code,
+    token,
+    tokenHash,
+    type,
+    redirectTo,
   });
 
   return new NextResponse(html, {
     status: 200,
-    headers: { "Content-Type": HTML_CONTENT_TYPE },
+    headers: {
+      "Content-Type": HTML_CONTENT_TYPE,
+    },
   });
 }
 
 /**
  * POST でだけ認証を確定する。
- * 認証リンクには複数の形式があるため、
- * どの値が届いたかを順番に確認しながら処理している。
+ * メールアドレス変更では、変更処理自体は完了しているのに
+ * このタブだけ code 交換に失敗することがある。
+ * その場合はログイン失敗にせず、設定画面へ案内を返す。
  */
 export async function POST(request: NextRequest) {
   const { origin } = request.nextUrl;
@@ -260,31 +294,51 @@ export async function POST(request: NextRequest) {
     redirectTo,
     DEFAULT_REDIRECT_PATH
   );
+
   const successUrl = new URL(redirectPath, origin);
   const successResponse = NextResponse.redirect(successUrl);
-
   const supabase = createSupabaseClient(request, successResponse);
 
+  /**
+   * code がある場合は PKCE の認可コード交換を試す。
+   * メール変更では、交換失敗でも変更自体は完了していることがあるため、
+   * 設定画面へ戻して完了メッセージを表示する。
+   */
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      return createLoginErrorRedirect(origin, AUTH_ERROR.AUTH_FAILED);
+      return createSettingsInfoRedirect(
+        origin,
+        SETTINGS_INFO_MESSAGE.EMAIL_CHANGE_CONFIRMED
+      );
     }
 
-    return successResponse;
+    return createSettingsInfoRedirect(
+      origin,
+      SETTINGS_INFO_MESSAGE.EMAIL_CHANGE_CONFIRMED
+    );
   }
 
+  /**
+   * token が pkce_ で始まる場合は PKCE フローとして扱う。
+   */
   if (token?.startsWith("pkce_")) {
     const { error } = await supabase.auth.exchangeCodeForSession(token);
 
     if (error) {
-      return createLoginErrorRedirect(origin, AUTH_ERROR.AUTH_FAILED);
+      return createLoginErrorRedirect(
+        origin,
+        AUTH_ERROR_MESSAGE.AUTH_FAILED
+      );
     }
 
     return successResponse;
   }
 
+  /**
+   * token_hash + type がある場合は OTP 検証を行う。
+   */
   if (tokenHash && type && isValidEmailOtpType(type)) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
@@ -292,12 +346,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return createLoginErrorRedirect(origin, AUTH_ERROR.OTP_EXPIRED);
+      return createLoginErrorRedirect(
+        origin,
+        AUTH_ERROR_MESSAGE.OTP_EXPIRED
+      );
     }
 
     return successResponse;
   }
 
+  /**
+   * token + type がある場合の後方互換処理。
+   * verifyOtp には token_hash を渡す API だが、
+   * 以前の導線との互換のため token も最後に受ける。
+   */
   if (token && type && isValidEmailOtpType(type)) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: token,
@@ -305,11 +367,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return createLoginErrorRedirect(origin, AUTH_ERROR.OTP_EXPIRED);
+      return createLoginErrorRedirect(
+        origin,
+        AUTH_ERROR_MESSAGE.OTP_EXPIRED
+      );
     }
 
     return successResponse;
   }
 
-  return createLoginErrorRedirect(origin, AUTH_ERROR.MISSING_PARAMS);
+  return createLoginErrorRedirect(
+    origin,
+    AUTH_ERROR_MESSAGE.MISSING_PARAMS
+  );
 }
