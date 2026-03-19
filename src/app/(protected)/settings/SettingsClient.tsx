@@ -23,6 +23,7 @@ type EmailChangeFormData = z.infer<typeof emailChangeSchema>;
 
 type SettingsClientProps = {
   initialEmail: string | null;
+  infoMessage: string | null;
 };
 
 const INPUT_CLASS = [
@@ -42,6 +43,11 @@ const LABEL_CLASS =
 const CARD_CLASS = [
   "rounded-2xl border border-[hsl(var(--border))]",
   "bg-[hsl(var(--card))] p-6 shadow-lg",
+].join(" ");
+
+const INFO_MESSAGE_CLASS = [
+  "rounded-2xl border px-4 py-3 text-sm font-medium",
+  "border-[#02EDAF] bg-[#FFFFFF] text-[#02EDAF]",
 ].join(" ");
 
 const PRIMARY_BUTTON_CLASS = [
@@ -86,7 +92,10 @@ const DANGER_BUTTON_CLASS = [
   "disabled:cursor-not-allowed disabled:opacity-50",
 ].join(" ");
 
-export default function SettingsClient({ initialEmail }: SettingsClientProps) {
+export default function SettingsClient({
+  initialEmail,
+  infoMessage,
+}: SettingsClientProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
@@ -157,6 +166,12 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">設定</h1>
 
+      {infoMessage ? (
+        <section className={INFO_MESSAGE_CLASS} aria-live="polite">
+          <p>{infoMessage}</p>
+        </section>
+      ) : null}
+
       <section className={CARD_CLASS}>
         <h2 className="mb-4 text-lg font-semibold text-[hsl(var(--card-foreground))]">
           メールアドレスの変更
@@ -182,9 +197,9 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
               className={INPUT_CLASS}
               {...register("newEmail")}
             />
-            {errors.newEmail && (
+            {errors.newEmail ? (
               <p className="text-sm text-red-500">{errors.newEmail.message}</p>
-            )}
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -199,11 +214,11 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
               className={INPUT_CLASS}
               {...register("confirmEmail")}
             />
-            {errors.confirmEmail && (
+            {errors.confirmEmail ? (
               <p className="text-sm text-red-500">
                 {errors.confirmEmail.message}
               </p>
-            )}
+            ) : null}
           </div>
 
           <button
@@ -231,7 +246,7 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
             </p>
           </div>
 
-          {mounted && (
+          {mounted ? (
             <button
               type="button"
               role="switch"
@@ -254,7 +269,7 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
                 ].join(" ")}
               />
             </button>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -282,7 +297,7 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
         </div>
       </section>
 
-      {showDeleteDialog && (
+      {showDeleteDialog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/50"
@@ -335,7 +350,7 @@ export default function SettingsClient({ initialEmail }: SettingsClientProps) {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
